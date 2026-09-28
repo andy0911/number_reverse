@@ -6,7 +6,11 @@ struct GameView: View {
     let exit: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
+        // 不変条件: SE（375×667pt）で盤の高さを、ガラス chrome 導入前（328pt）から削らない（実測 327.5pt）。
+        // 盤は高さに制約のある端末では残りの高さいっぱいに縮むため、ガラス chrome で増えた余白
+        // （HandPicker の padding と「タイトルへ」ボタンの高さ・下の余白）を、要素間隔（導入前は 12pt）を詰めて相殺している。
+        // これらの値を変えるときは SE 相当の画面で盤の高さを測り直すこと
+        VStack(spacing: 7) {
             PlayerBar(model: model, player: .second)
             Text(statusText)
                 .font(.headline)
@@ -26,9 +30,12 @@ struct GameView: View {
             HStack {
                 Button("タイトルへ", systemImage: "chevron.left", action: exit)
                     .labelStyle(.titleAndIcon)
+                    .chromeButtonStyle()
                 Spacer()
             }
             .padding(.horizontal)
+            // ガラスのボタンの影が直下のプレイヤーバーに重ならないための余白（高さは上の VStack の間隔で相殺している）
+            .padding(.bottom, 4)
         }
     }
 
@@ -52,13 +59,13 @@ struct GameView: View {
         case .awaitingBombDirection(let owner, _) where model.isHumanTurn:
             DialogCard(title: "\(owner.displayName)の爆弾が爆発", subtitle: "相手の駒を盤端まですべて裏返す方向を選んでください") {
                 Button("上下左右 ✚") { model.chooseBombDirection(.cross) }
-                    .buttonStyle(.borderedProminent)
+                    .chromeProminentButtonStyle()
                 Button("斜め ✕") { model.chooseBombDirection(.diagonal) }
-                    .buttonStyle(.borderedProminent)
+                    .chromeProminentButtonStyle()
             }
         case .finished:
             DialogCard(title: resultText, subtitle: "先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻") {
-                Button("タイトルへ", action: exit).buttonStyle(.borderedProminent)
+                Button("タイトルへ", action: exit).chromeProminentButtonStyle()
             }
         default:
             EmptyView()

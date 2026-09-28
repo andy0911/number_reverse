@@ -5,7 +5,8 @@ import NumberOthelloCore
 struct NumberOthelloApp: App {
     var body: some Scene {
         WindowGroup {
-            RootView()
+            // タイトル・対局の両方に共通の背景を敷く（ガラス chrome の背後になる）
+            RootView().background { ChromeBackdrop() }
         }
     }
 }
@@ -65,7 +66,7 @@ struct TitleView: View {
         Button { start(mode) } label: {
             Text(title).frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .chromeProminentButtonStyle()
         .controlSize(.large)
     }
 }

@@ -9,7 +9,7 @@ struct PlayerBar: View {
     var body: some View {
         let isActive = model.actingPlayer == player
         HStack {
-            Circle().fill(player.color).frame(width: 16, height: 16)
+            ChipDot(owner: player).frame(width: 18, height: 18)
             Text(player.displayName + (model.mode.isCPU(player) ? "（CPU）" : ""))
                 .fontWeight(isActive ? .bold : .regular)
             Spacer()
@@ -19,8 +19,10 @@ struct PlayerBar: View {
                 .font(.title3.monospacedDigit().bold())
         }
         .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
+        // ガラスの上に、手番の強調（プレイヤー色の枠）を重ねる
+        .chromeGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(isActive ? player.color : .clear, lineWidth: 3)
         )
     }

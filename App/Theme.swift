@@ -19,7 +19,7 @@ enum Theme {
 
     // MARK: - 盤の枠・区切り線
     /// 盤の外枠であり、Grid の 1pt の隙間としてマス目の境界線にもなる。
-    /// 全ゾーンより暗くして境界を出す（ダークでは黒背景から浮かない程度の暗灰）。
+    /// 全ゾーンより暗くして境界を出す（ダークでは、背景（ChromeBackdrop のほぼ黒の暗色グラデーション）から浮かない程度の暗灰）。
     static let boardFrame = Color(light: UIColor(white: 0, alpha: 0.6), dark: UIColor(white: 0.1, alpha: 1))
     /// 先行/後攻の陣の境界（点線、spec §2）。ダーク背景では黒が見えないため明るい色にする。
     static let boardDivider = Color(light: .black, dark: UIColor(white: 0.92, alpha: 1))
@@ -55,4 +55,33 @@ private extension Color {
 extension Player {
     /// プレイヤーを表す色（先行=オレンジ、後攻=グリーン）
     var color: Color { self == .first ? Theme.playerFirst : Theme.playerSecond }
+}
+
+// MARK: - チップデザイン
+// チップ（ChipView）とガラス chrome（ChromeStyle）用のトークン。上の既存トークンの値は変えていない。
+// 駒の陰影は `Player.color`（ライト/ダークで別値）に白/黒の半透明を重ねて派生させるので、プレイヤー色の変更に追従する。
+// 数字の色 `chipText` はライトで白・ダークで暗色になる。数字の背後の窪み（chipRecess）と文字影（chipTextShadow）には、
+// その明暗に対応する値を外観ごとに設定して、どちらの外観でも数字と背景のコントラストを保つ（chipText とは独立した
+// トークンなので、chipText を変えるときはこの 2 つも見直すこと）。下のトークンで light/dark 別の値を持つのは
+// chipRecess・chipTextShadow・backdrop の 4 つで、それ以外は白/黒の半透明でライト/ダーク共通。
+extension Theme {
+    /// 駒の側面（厚み）。駒色の上に重ねて暗くする
+    static let chipSide = Color.black.opacity(0.42)
+    /// 駒の外周の帯を締める暗色
+    static let chipShade = Color.black.opacity(0.22)
+    /// 数字の背後の窪み。ライトは暗くして白文字を、ダークは明るくして暗色の文字を際立たせる（chipText の明暗と逆向き）。
+    /// ライトの 0.30 は、光沢（左上寄り）が重なる位置でも数字のコントラストが平らな円（変更前）以上になる値
+    static let chipRecess = Color(light: UIColor(white: 0, alpha: 0.30), dark: UIColor(white: 1, alpha: 0.22))
+    /// 数字の影。ライトは暗い影で白文字を締める。ダークの文字は暗色なので影は付けない
+    static let chipTextShadow = Color(light: UIColor(white: 0, alpha: 0.45), dark: .clear)
+    /// 縁の刻み・内側の細線。駒色に重ねる白（数字と last-placed リングの白より控えめにする）
+    static let chipInlay = Color.white.opacity(0.5)
+    /// 光沢（外周の左上に寄せて置く）
+    static let chipSheen = Color.white.opacity(0.4)
+    /// 状態リング（flipped / last-placed）の内側に引く縁取り。白リングも赤リングも刻みと見分けられるようにする
+    static let chipRingKeyline = Color.black.opacity(0.6)
+
+    /// 画面背景（ChromeBackdrop）の上端・下端。ガラス chrome の背後に敷く。ダークはほぼ黒の暗色グラデーション
+    static let backdropTop = Color(light: UIColor(red: 0.96, green: 0.97, blue: 0.99, alpha: 1), dark: UIColor(red: 0.11, green: 0.12, blue: 0.15, alpha: 1))
+    static let backdropBottom = Color(light: UIColor(red: 0.87, green: 0.90, blue: 0.95, alpha: 1), dark: UIColor(red: 0.05, green: 0.06, blue: 0.08, alpha: 1))
 }
