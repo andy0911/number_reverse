@@ -23,14 +23,7 @@ struct CellView: View {
                     .font(.title2.bold())
                     .foregroundStyle(.secondary)
             case .piece(let piece):
-                Circle()
-                    .fill(piece.owner.color)
-                    .overlay(Circle().strokeBorder(isFlipped ? Theme.flippedRing : (isLastPlaced ? Theme.lastPlacedRing : .clear), lineWidth: 3))
-                    .overlay(
-                        Text(piece.kind.description)
-                            .font(.system(size: 18, weight: .heavy, design: .rounded))
-                            .foregroundStyle(Theme.chipText)
-                    )
+                ChipView(piece: piece, isFlipped: isFlipped, isLastPlaced: isLastPlaced)
                     .padding(3)
             }
         }
