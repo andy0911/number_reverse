@@ -35,7 +35,8 @@ struct ChipView: View {
                         Circle().inset(by: layout.recessInset - ChipLayout.inlayWidth)
                             .strokeBorder(Theme.chipInlay, lineWidth: ChipLayout.inlayWidth)
                     }
-                    // 数字の背後の窪みと文字影は、数字の色（chipText）の明暗に合わせて外観ごとに切り替わる
+                    // 数字の背後の窪みと文字影には、数字の色（chipText）の明暗に対応する値を外観ごとに設定している
+                    // （chipText とは独立したトークンなので、chipText を変えるときは見直すこと）
                     Circle().inset(by: layout.recessInset).fill(Theme.chipRecess)
                     Text(piece.kind.description)
                         .font(.system(size: layout.fontSize, weight: .heavy, design: .rounded))

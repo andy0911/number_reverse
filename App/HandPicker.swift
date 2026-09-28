@@ -39,7 +39,8 @@ struct HandPicker: View {
             }
         }
         .padding(.horizontal, 8)
-        // 縦の余白は控えめにする（盤の高さを削らないため。GameView の VStack の間隔と合わせて main と同じ盤の大きさに保つ）
+        // 縦の余白は控えめにする。SE（375×667pt）で盤の高さを削らない不変条件の一部
+        // （GameView の VStack の間隔などと合わせて相殺している。詳細は GameView 冒頭のコメント）
         .padding(.vertical, 7)
         // ガラスは背景のコンテナにだけ適用する（各駒ボタンの選択中の塗りが弱まらないように）
         .chromeGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))

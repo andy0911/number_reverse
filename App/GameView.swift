@@ -6,9 +6,10 @@ struct GameView: View {
     let exit: () -> Void
 
     var body: some View {
-        // 盤は高さに制約のある端末（iPhone SE 等）では残りの高さいっぱいに縮む。ガラス chrome の余白
-        // （HandPicker の padding と「タイトルへ」ボタンの高さ・余白）が増えた分を、要素間隔を詰めて相殺し、
-        // main と同じ端末で盤の大きさが変わらないようにしている（間隔は main の 12pt から詰めた値）
+        // 不変条件: SE（375×667pt）で盤の高さを、ガラス chrome 導入前（328pt）から削らない（実測 327.5pt）。
+        // 盤は高さに制約のある端末では残りの高さいっぱいに縮むため、ガラス chrome で増えた余白
+        // （HandPicker の padding と「タイトルへ」ボタンの高さ・下の余白）を、要素間隔（導入前は 12pt）を詰めて相殺している。
+        // これらの値を変えるときは SE 相当の画面で盤の高さを測り直すこと
         VStack(spacing: 7) {
             PlayerBar(model: model, player: .second)
             Text(statusText)

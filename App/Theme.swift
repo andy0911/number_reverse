@@ -60,16 +60,18 @@ extension Player {
 // MARK: - チップデザイン
 // チップ（ChipView）とガラス chrome（ChromeStyle）用のトークン。上の既存トークンの値は変えていない。
 // 駒の陰影は `Player.color`（ライト/ダークで別値）に白/黒の半透明を重ねて派生させるので、プレイヤー色の変更に追従する。
-// 数字の色 `chipText` はライトで白・ダークで暗色になる。数字の背後の窪み（chipRecess）と文字影（chipTextShadow）は
-// その明暗に合わせて切り替え、どちらの外観でも数字と背景のコントラストを保つ（下のトークンで light/dark 別の値を持つのは
-// chipRecess・chipTextShadow・backdrop の 4 つ。それ以外は白/黒の半透明でライト/ダーク共通）。
+// 数字の色 `chipText` はライトで白・ダークで暗色になる。数字の背後の窪み（chipRecess）と文字影（chipTextShadow）には、
+// その明暗に対応する値を外観ごとに設定して、どちらの外観でも数字と背景のコントラストを保つ（chipText とは独立した
+// トークンなので、chipText を変えるときはこの 2 つも見直すこと）。下のトークンで light/dark 別の値を持つのは
+// chipRecess・chipTextShadow・backdrop の 4 つで、それ以外は白/黒の半透明でライト/ダーク共通。
 extension Theme {
     /// 駒の側面（厚み）。駒色の上に重ねて暗くする
     static let chipSide = Color.black.opacity(0.42)
     /// 駒の外周の帯を締める暗色
     static let chipShade = Color.black.opacity(0.22)
-    /// 数字の背後の窪み。ライトは暗くして白文字を、ダークは明るくして暗色の文字を際立たせる（chipText の明暗と逆向き）
-    static let chipRecess = Color(light: UIColor(white: 0, alpha: 0.22), dark: UIColor(white: 1, alpha: 0.22))
+    /// 数字の背後の窪み。ライトは暗くして白文字を、ダークは明るくして暗色の文字を際立たせる（chipText の明暗と逆向き）。
+    /// ライトの 0.30 は、光沢（左上寄り）が重なる位置でも数字のコントラストが平らな円（変更前）以上になる値
+    static let chipRecess = Color(light: UIColor(white: 0, alpha: 0.30), dark: UIColor(white: 1, alpha: 0.22))
     /// 数字の影。ライトは暗い影で白文字を締める。ダークの文字は暗色なので影は付けない
     static let chipTextShadow = Color(light: UIColor(white: 0, alpha: 0.45), dark: .clear)
     /// 縁の刻み・内側の細線。駒色に重ねる白（数字と last-placed リングの白より控えめにする）
