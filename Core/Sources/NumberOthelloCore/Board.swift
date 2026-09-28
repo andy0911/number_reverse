@@ -64,8 +64,9 @@ public struct Board: Hashable, Sendable {
         return result
     }
 
-    /// start から direction 方向へ連続する owner の駒の位置。空・×・盤外・色替わりで止まる
-    private func run(from start: Position, direction: Direction, owner: Player) -> [Position] {
+    /// start から direction 方向へ連続する owner の駒の位置。空・×・盤外・色替わりで止まる。
+    /// コーチモードの検証（Tutorial.swift）も同じ関数で軍の合計を数える
+    func run(from start: Position, direction: Direction, owner: Player) -> [Position] {
         var positions: [Position] = []
         var q = start
         while q.isOnBoard, let piece = self[q].piece, piece.owner == owner {
@@ -75,7 +76,7 @@ public struct Board: Hashable, Sendable {
         return positions
     }
 
-    private func sum(_ positions: [Position]) -> Int {
+    func sum(_ positions: [Position]) -> Int {
         positions.reduce(0) { $0 + (self[$1].piece?.kind.value ?? 0) }
     }
 }

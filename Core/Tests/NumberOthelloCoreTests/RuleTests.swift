@@ -1,27 +1,9 @@
 import Testing
 @testable import NumberOthelloCore
 
-/// 盤面を文字列から作る。トークン: `.` 空, `x` 荒地, `a<k>` 先行, `b<k>` 後攻（k は 1-9/T/B）
-func makeBoard(_ rows: [String]) -> Board {
-    var board = Board()
-    for (r, line) in rows.enumerated() {
-        let tokens = line.split(separator: " ")
-        precondition(tokens.count == Board.size)
-        for (c, token) in tokens.enumerated() {
-            let p = Position(r, c)
-            switch token {
-            case ".": board[p] = .empty
-            case "x": board[p] = .wasteland
-            default:
-                let owner: Player = token.first == "a" ? .first : .second
-                let k = token.dropFirst()
-                let kind: PieceKind = k == "T" ? .tank : k == "B" ? .bomb : .number(Int(k)!)
-                board[p] = .piece(Piece(owner, kind))
-            }
-        }
-    }
-    return board
-}
+/// 盤面を文字列から作る。トークン: `.` 空, `x` 荒地, `a<k>` 先行, `b<k>` 後攻（k は 1-9/T/B）。
+/// パーサは Core の `Board(diagram:)`（コーチモードのシナリオと共用）
+func makeBoard(_ rows: [String]) -> Board { Board(diagram: rows) }
 
 let emptyRow = ". . . . . . . ."
 
