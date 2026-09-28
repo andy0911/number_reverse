@@ -10,7 +10,8 @@ extension Tutorial {
 ///
 /// 3 層で確認する。ただし文章そのものは検証対象ではない（文章と claim の対応は執筆時のレビューに依存する）:
 /// 1. `TutorialClaimsTests`: 全シナリオの全主張（説明文に併記した claim）が `run()` で実エンジンの結果と一致する。
-///    加えて、文中の「a + b = c」の算術が正しく、その数値が claim に現れることを確認する
+///    加えて、文中の「a + b = c」の算術が正しく、その数値が同じシナリオ内のいずれかの claim か実演で置く駒の値に
+///    現れることを確認する（どの claim と対応するかまでは照合しない）
 /// 2. `TutorialNarrationTests`: 説明文が述べる主要な事実を、`run()` を介さず `GameState` を直接動かして独立に確認する
 /// 3. `TutorialVerificationTests`: 主張の検証機構が、嘘の主張を実際に検出できる（空振りしない）
 @Suite("コーチモード: 主張の検証")
@@ -51,7 +52,7 @@ struct TutorialClaimsTests {
         }
     }
 
-    @Test("文中の「a + b = c」は算術が正しく、数値が claim に現れる", arguments: TutorialTopic.allCases)
+    @Test("文中の「a + b = c」は算術が正しく、数値が同じシナリオの claim か実演の駒の値に現れる", arguments: TutorialTopic.allCases)
     func arithmeticInNarrationMatchesClaims(topic: TutorialTopic) {
         let scenario = Tutorial.scenario(topic)
         let backed = scenario.claimNumbers
@@ -62,10 +63,23 @@ struct TutorialClaimsTests {
                     let total = Int(match.2)!
                     #expect(terms.reduce(0, +) == total, "\(topic)「\(step.title)」: \(match.0) の算術が誤り")
                     for n in terms + [total] {
-                        #expect(backed.contains(n), "\(topic)「\(step.title)」: \(match.0) の \(n) が claim に現れない")
+                        #expect(backed.contains(n), "\(topic)「\(step.title)」: \(match.0) の \(n) が、同じシナリオの claim にも実演の駒の値にも現れない")
                     }
                 }
             }
+        }
+    }
+
+    @Test("拒否された実演では、置こうとしたマスが結果のフォーカスに含まれる（赤リングが必ず見える）", arguments: TutorialTopic.allCases)
+    func rejectedCellIsInResultFocus(topic: TutorialTopic) {
+        let scenario = Tutorial.scenario(topic)
+        for (step, outcome) in zip(scenario.steps, scenario.run().steps) {
+            // 拒否と拒否マスは常にセット（拒否された操作は必ず置く手）
+            #expect((outcome.rejection == nil) == (outcome.rejectedCell == nil), "\(topic)「\(step.title)」")
+            guard let demo = step.demo, let cell = outcome.rejectedCell else { continue }
+            #expect(
+                outcome.cells(for: demo.resultFocus, afterDemo: true).contains(cell),
+                "\(topic)「\(step.title)」: 置こうとした \(cell) が結果のフォーカスに含まれない")
         }
     }
 
@@ -140,7 +154,7 @@ struct TutorialNarrationTests {
         #expect(emptyRed == [at(3, 3), at(4, 4)] && placeableRed == emptyRed)
     }
 
-    @Test("駒の裏返り: 9 と 5 で 6 を挟むと先行の 4、3 と 3 で 4 を挟むと後攻の 6")
+    @Test("数字駒の裏返り: 9 と 5 で 6 を挟むと先行の 4、3 と 3 で 4 を挟むと後攻の 6")
     func flip() throws {
         var state = Tutorial.scenario(.flip).initial
         try state.place(.number(9), at: at(4, 3))
