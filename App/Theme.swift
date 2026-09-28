@@ -6,7 +6,8 @@ import NumberOthelloCore
 /// Asset Catalog は使わない（JSON の diff が肥大化し他ブランチと衝突しやすいため）。
 enum Theme {
     // MARK: - 盤面ゾーン（spec §2）
-    // 赤=初期配置エリア、青=通常配置可、灰=挟めるときのみ、という意味を色で伝えている。
+    // 赤・青=常に配置可（赤は初期配置の 1〜2 手目の置き場所でもある。spec §4.1, §4.2）、
+    // 灰=置くと 1 枚以上裏返る場合のみ配置可（spec §4.2 R-2）、という意味を色で伝えている。
     // ダークでも灰（無彩色）・青・赤が互いに明確に区別できるよう、色味と明度の両方に差をつける。
     static let zoneGray = Color(light: UIColor(white: 0.78, alpha: 1), dark: UIColor(white: 0.30, alpha: 1))
     static let zoneBlue = Color(light: UIColor(red: 0.84, green: 0.9, blue: 0.97, alpha: 1), dark: UIColor(red: 0.12, green: 0.22, blue: 0.40, alpha: 1))
@@ -16,7 +17,7 @@ enum Theme {
     /// 盤の外枠であり、Grid の 1pt の隙間としてマス目の境界線にもなる。
     /// 全ゾーンより暗くして境界を出す（ダークでは黒背景から浮かない程度の暗灰）。
     static let boardFrame = Color(light: UIColor(white: 0, alpha: 0.6), dark: UIColor(white: 0.1, alpha: 1))
-    /// 先行/後攻の陣の境界（点線）。ダーク背景では黒が見えないため明るい色にする。
+    /// 先行/後攻の陣の境界（点線、spec §2）。ダーク背景では黒が見えないため明るい色にする。
     static let boardDivider = Color(light: .black, dark: UIColor(white: 0.92, alpha: 1))
 
     // MARK: - 駒
