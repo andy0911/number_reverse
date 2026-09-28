@@ -482,7 +482,7 @@ public enum Tutorial {
                     "1 を置いてみる",
                     [.place(.first, .number(1), at: P(4, 0))],
                     result: "置けませんでした。挟む形でも、自軍の合計 1 + 1 = 2 は相手の 9 を上回れず、1 枚も裏返せないからです。",
-                    focus: .cells([P(4, 0)]),
+                    focus: .cells([P(4, 0), P(4, 1), P(4, 2)]),
                     after: [
                         .sandwich(from: P(4, 0), direction: dir(0, 1), behind: 1, far: 1, enemy: 9),
                         .rejected(.grayRequiresCapture), .cell(P(4, 0), .empty),
