@@ -6,7 +6,8 @@ import NumberOthelloCore
 /// Asset Catalog は使わない（JSON の diff が肥大化し他ブランチと衝突しやすいため）。
 enum Theme {
     // MARK: - 盤面ゾーン（spec §2）
-    // ダークでも灰（無彩色）・青・赤が互いに明確に区別できるよう、明度差ではなく色味の差で分ける。
+    // 赤=初期配置エリア、青=通常配置可、灰=挟めるときのみ、という意味を色で伝えている。
+    // ダークでも灰（無彩色）・青・赤が互いに明確に区別できるよう、色味と明度の両方に差をつける。
     static let zoneGray = Color(light: UIColor(white: 0.78, alpha: 1), dark: UIColor(white: 0.30, alpha: 1))
     static let zoneBlue = Color(light: UIColor(red: 0.84, green: 0.9, blue: 0.97, alpha: 1), dark: UIColor(red: 0.12, green: 0.22, blue: 0.40, alpha: 1))
     static let zoneRed = Color(light: UIColor(red: 0.98, green: 0.8, blue: 0.8, alpha: 1), dark: UIColor(red: 0.40, green: 0.15, blue: 0.17, alpha: 1))
@@ -27,8 +28,11 @@ enum Theme {
     static let lastPlacedRing = Color.white
 
     // MARK: - プレイヤー色
-    // 色相はライト/ダークで維持し（先行=暖色のオレンジ、後攻=寒色のグリーン）、ダークでは明度・彩度を上げて暗い盤面で映えさせる。
+    // 先行=暖色（オレンジ）、後攻=寒色（グリーン）の色系統はライト/ダークで保つ。
+    // ダークでは暗い盤面で映えるよう明度を上げ、彩度はやや下げる（色相のずれは数度以内）。
+    /// 先行（spec §1）の駒色
     static let playerFirst = Color(light: UIColor(red: 0.95, green: 0.68, blue: 0.1, alpha: 1), dark: UIColor(red: 1.0, green: 0.74, blue: 0.20, alpha: 1))
+    /// 後攻（spec §1）の駒色
     static let playerSecond = Color(light: UIColor(red: 0.1, green: 0.55, blue: 0.4, alpha: 1), dark: UIColor(red: 0.22, green: 0.78, blue: 0.58, alpha: 1))
 
     // MARK: - オーバーレイ
