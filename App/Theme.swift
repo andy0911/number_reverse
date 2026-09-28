@@ -6,12 +6,16 @@ import NumberOthelloCore
 /// Asset Catalog は使わない（JSON の diff が肥大化し他ブランチと衝突しやすいため）。
 enum Theme {
     // MARK: - 盤面ゾーン（spec §2）
-    // 赤・青=常に配置可（赤は初期配置の 1〜2 手目の置き場所でもある。spec §4.1, §4.2）、
+    // 赤・青=本戦では常に配置可（spec §4.2。赤は初期配置の 1〜2 手目の置き場所でもある、spec §4.1）、
     // 灰=置くと 1 枚以上裏返る場合のみ配置可（spec §4.2 R-2）、という意味を色で伝えている。
-    // ダークでも灰（無彩色）・青・赤が互いに明確に区別できるよう、色味と明度の両方に差をつける。
+    // ダークでも 3 ゾーンを判別できるよう、灰は無彩色、青・赤は色相で分けたうえで、
+    // 明度（CIE L*）も 灰 約33 > 青 約24 > 赤 約17 と段差をつけ、色相だけに頼らないようにしている。
+    /// 灰ゾーン（外周 28 マス、spec §2）。ダークは無彩色で 3 ゾーン中もっとも明るい。
     static let zoneGray = Color(light: UIColor(white: 0.78, alpha: 1), dark: UIColor(white: 0.30, alpha: 1))
+    /// 青ゾーン（内側 32 マス、spec §2）。ダークは濃紺。
     static let zoneBlue = Color(light: UIColor(red: 0.84, green: 0.9, blue: 0.97, alpha: 1), dark: UIColor(red: 0.12, green: 0.22, blue: 0.40, alpha: 1))
-    static let zoneRed = Color(light: UIColor(red: 0.98, green: 0.8, blue: 0.8, alpha: 1), dark: UIColor(red: 0.40, green: 0.15, blue: 0.17, alpha: 1))
+    /// 赤ゾーン（中央 4 マス、spec §2）。ダークは暗赤で 3 ゾーン中もっとも暗い。
+    static let zoneRed = Color(light: UIColor(red: 0.98, green: 0.8, blue: 0.8, alpha: 1), dark: UIColor(red: 0.28, green: 0.105, blue: 0.12, alpha: 1))
 
     // MARK: - 盤の枠・区切り線
     /// 盤の外枠であり、Grid の 1pt の隙間としてマス目の境界線にもなる。
@@ -30,7 +34,7 @@ enum Theme {
 
     // MARK: - プレイヤー色
     // 先行=暖色（オレンジ）、後攻=寒色（グリーン）の色系統はライト/ダークで保つ。
-    // ダークでは暗い盤面で映えるよう明度を上げ、彩度はやや下げる（色相のずれは数度以内）。
+    // ダークでは暗い盤面で映えるよう明度を上げ、HSV の彩度はやや下げる（色相のずれは数度以内）。
     /// 先行（spec §1）の駒色
     static let playerFirst = Color(light: UIColor(red: 0.95, green: 0.68, blue: 0.1, alpha: 1), dark: UIColor(red: 1.0, green: 0.74, blue: 0.20, alpha: 1))
     /// 後攻（spec §1）の駒色
