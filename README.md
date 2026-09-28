@@ -19,3 +19,5 @@ xcodebuild -project NumberOthello.xcodeproj -scheme NumberOthello \
 ```
 
 起動引数 `-demo` で CPU 同士の対局を観戦できる（動作確認用）。
+
+タイトル画面の「遊び方を見る」でコーチモード（コーチマークで盤面を指し示しながらルールを説明）を開ける。説明は実際の `GameState` を動かして作り、内容は `swift test` で検証している（説明範囲は spec §10）。
