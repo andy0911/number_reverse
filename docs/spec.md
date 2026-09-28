@@ -200,7 +200,9 @@ else: 何もしない
 シナリオは `Core/Sources/NumberOthelloCore/TutorialScenarios.swift`、検証は `Core/Tests/NumberOthelloCoreTests/TutorialTests.swift`。
 
 - 各シナリオは実際の `GameState` を動かして実演する。盤面・ハイライト（裏返った駒など）は実行結果から求める
-- 説明文が述べる事実（裏返る/裏返らない、置ける/置けない、軍の合計値など）は `TutorialClaim` として併記し、`swift test` で実エンジンの結果と照合する。アプリでも実行時に照合し、不一致なら警告を表示する
+- 説明文が述べる事実（裏返る/裏返らない、置ける/置けない、軍の合計値、「もし別の手なら」の結果など）は `TutorialClaim` として併記し、実エンジンの結果と照合する。照合は `swift test` に加えてアプリの実行時にも行い、不一致なら警告を表示する
+- 説明文の文章そのものは固定文。定義上の説明（軍の定義、n と 10−n の関係など）は claim では検証しきれないため、実演の結果（裏返った駒の数字など）で裏付ける
+- claim とは別に、主要な事実を `GameState` の直接操作で確かめるテスト（`TutorialNarrationTests`）と、検証機構が嘘の主張を検出できることのテストを持つ
 - 説明文と本書が食い違う場合は本書が正。説明文を直す
 
 | # | シナリオ（`TutorialTopic`） | 説明するルール | 実演の要点 |

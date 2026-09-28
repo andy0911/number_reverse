@@ -12,10 +12,6 @@ public enum Tutorial {
         zones, flip, tie, behindArmy, enemyArmy, tank, bombNoAttack, bombExplosion, wasteland, grayCell, passAndEnd,
     ]
 
-    public static func scenario(_ topic: TutorialTopic) -> TutorialScenario {
-        scenarios.first { $0.id == topic }!
-    }
-
     // MARK: - 記述用の短縮
 
     private typealias P = Position
@@ -47,7 +43,6 @@ public enum Tutorial {
     static let zones = TutorialScenario(
         id: .zones,
         title: "マスの色と点線",
-        summary: "赤・青・灰のマスと、陣の境目の点線。初期配置の進め方。",
         initial: GameState(),
         steps: [
             step(
@@ -81,7 +76,10 @@ public enum Tutorial {
                     [.place(.first, .tank, at: P(4, 3))],
                     result: "置けませんでした。T と B は、初期配置では使えません。",
                     focus: .cells([P(4, 3)]),
-                    after: [.rejected(.numberRequiredInSetup), .cell(P(4, 3), .empty)])),
+                    after: [
+                        .rejected(.numberRequiredInSetup), .cell(P(4, 3), .empty),
+                        .whatIfRejected(.place(.first, .bomb, at: P(4, 3)), .numberRequiredInSetup),
+                    ])),
             step(
                 "初期配置の 6 手",
                 "初期配置は先行と後攻が交互に 6 手。まず赤マスへ 1 枚ずつ、次に青マスへ 2 枚ずつ、それぞれ自分の陣に数字の駒を置きます。この間は駒を裏返す判定がありません。",
@@ -113,7 +111,7 @@ public enum Tutorial {
                 "青マス",
                 "内側の 32 マスは青マスです。本戦では、空いていればいつでも置けます。",
                 focus: .zone(.blue),
-                before: [.zoneCount(.blue, 32), .phase(.playing)]),
+                before: [.zoneCount(.blue, 32), .phase(.playing), .canPlaceAnywhere(.blue, .number(5))]),
             step(
                 "灰マス",
                 "外周の 28 マスは灰マスです。ここには、置いた駒で相手の駒を 1 枚以上裏返せるときにしか置けません（くわしくは「灰マスのルール」で）。",
@@ -126,7 +124,6 @@ public enum Tutorial {
     static let flip = TutorialScenario(
         id: .flip,
         title: "駒の裏返り（n と 10−n）",
-        summary: "自軍の合計が相手を上回ると挟んだ駒が裏返り、数字は 10 から引いた値になる。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow, emptyRow,
@@ -174,7 +171,6 @@ public enum Tutorial {
     static let tie = TutorialScenario(
         id: .tie,
         title: "同じ合計では裏返らない",
-        summary: "裏返るのは、自軍の合計が相手の合計を「上回った」ときだけ。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -194,12 +190,13 @@ public enum Tutorial {
                 demo: demo(
                     "先行が 2 を置く",
                     [.place(.first, .number(2), at: P(4, 3))],
-                    result: "裏返りませんでした。同じ値では裏返らず、自軍の合計が相手を「上回った」ときだけ裏返ります。もし 3 を置いていれば、3 + 3 = 6 が 5 を上回り、裏返っていました。",
+                    result: "裏返りませんでした。数字の駒では、同じ値では裏返らず、自軍の合計が相手を「上回った」ときだけ裏返ります。もし 3 を置いていれば、3 + 3 = 6 が 5 を上回り、裏返っていました。",
                     focus: .cells([P(4, 2)]),
                     after: [
                         .sandwich(from: P(4, 3), direction: dir(0, -1), behind: 2, far: 3, enemy: 5),
                         .flipped([]), .cell(P(4, 2), b(5)), .cell(P(4, 3), a(2)),
                         .whatIf(.place(.first, .number(3), at: P(4, 3)), flipped: [P(4, 2)]),
+                        .whatIfSums(.place(.first, .number(3), at: P(4, 3)), direction: dir(0, -1), behind: 3, far: 3, enemy: 5),
                     ])),
         ])
 
@@ -208,7 +205,6 @@ public enum Tutorial {
     static let behindArmy = TutorialScenario(
         id: .behindArmy,
         title: "置いた駒の背後も自軍",
-        summary: "置いた駒の後ろに連なる自分の駒も、自軍の合計に数える。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -233,6 +229,11 @@ public enum Tutorial {
                     after: [
                         .sandwich(from: P(4, 2), direction: dir(0, 1), behind: 5, far: 5, enemy: 9),
                         .flipped([P(4, 3)]), .cell(P(4, 3), a(1)), .cell(P(4, 1), a(3)),
+                        // 背後の 3 が無ければ 2 + 5 = 7 で 9 に届かず、裏返らない
+                        .whatIfSums(
+                            .place(.first, .number(2), at: P(4, 2)), removing: [P(4, 1)],
+                            direction: dir(0, 1), behind: 2, far: 5, enemy: 9),
+                        .whatIf(.place(.first, .number(2), at: P(4, 2)), removing: [P(4, 1)], flipped: []),
                     ])),
         ])
 
@@ -241,7 +242,6 @@ public enum Tutorial {
     static let enemyArmy = TutorialScenario(
         id: .enemyArmy,
         title: "相手の軍はまとめて比べる",
-        summary: "連なった相手の駒は合計で比べ、挟めたらまとめて裏返る。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -274,7 +274,6 @@ public enum Tutorial {
     static let tank = TutorialScenario(
         id: .tank,
         title: "T（戦車）",
-        summary: "T は数を無視して裏返す。ただし自分は守備 0 で、裏返されると × になる。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow,
@@ -304,6 +303,7 @@ public enum Tutorial {
                         .sandwich(from: P(4, 1), direction: dir(0, 1), behind: 0, far: 1, enemy: 18),
                         .flipped([P(4, 2), P(4, 3)]), .cell(P(4, 2), a(1)), .cell(P(4, 3), a(1)),
                         .whatIf(.place(.first, .number(9), at: P(4, 1)), flipped: []),
+                        .whatIfSums(.place(.first, .number(9), at: P(4, 1)), direction: dir(0, 1), behind: 9, far: 1, enemy: 18),
                     ])),
             step(
                 "T は裏返ると ×",
@@ -326,7 +326,6 @@ public enum Tutorial {
     static let bombNoAttack = TutorialScenario(
         id: .bombNoAttack,
         title: "B（爆弾）は攻撃できない",
-        summary: "B は置いても相手を挟めない。数字の駒なら裏返せる形でも何も起きない。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -354,6 +353,7 @@ public enum Tutorial {
                     after: [
                         .flipped([]), .cell(P(4, 3), .piece(Piece(.first, .bomb))), .cell(P(4, 2), b(1)),
                         .whatIf(.place(.first, .number(1), at: P(4, 3)), flipped: [P(4, 2)]),
+                        .whatIfSums(.place(.first, .number(1), at: P(4, 3)), direction: dir(0, -1), behind: 1, far: 9, enemy: 1),
                     ])),
         ])
 
@@ -362,7 +362,6 @@ public enum Tutorial {
     static let bombExplosion = TutorialScenario(
         id: .bombExplosion,
         title: "B（爆弾）の爆発",
-        summary: "B は裏返されると × になり、持ち主が方向を選んで相手の駒を盤の端まで裏返す。",
         initial: GameState(
             board: Board(diagram: [
                 ". . a2 . . . . .",
@@ -377,12 +376,12 @@ public enum Tutorial {
         steps: [
             step(
                 "B が裏返されると",
-                "盤の中央に、後攻の B があります。B は、相手に裏返されると爆発します。",
+                "盤上に、後攻の B があります。B は、相手に裏返されると爆発します。",
                 focus: .cells([P(4, 2)]),
                 before: [.cell(P(4, 2), .piece(Piece(.second, .bomb))), .cell(P(4, 1), a(9)), .current(.first)]),
             step(
                 "B を挟む",
-                "先行が B の右に 1 を置くと、1 と 9 で B を挟みます。B の守備値は 0 なので、必ず裏返ります。",
+                "先行が B の右に 1 を置くと、1 と 9 で B を挟みます。B の守備値は 0 なので、自軍の合計 1 + 9 = 10 が上回り、裏返ります。",
                 focus: .cells([P(4, 1), P(4, 2), P(4, 3)]),
                 demo: demo(
                     "先行が 1 を置く",
@@ -418,7 +417,6 @@ public enum Tutorial {
     static let wasteland = TutorialScenario(
         id: .wasteland,
         title: "×（荒地）",
-        summary: "× はどちらの陣地でもなく、軍を分断する。駒も置けない。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -438,7 +436,7 @@ public enum Tutorial {
                 demo: demo(
                     "先行が 9 を置く",
                     [.place(.first, .number(9), at: P(4, 4))],
-                    result: "何も裏返りません。1 の向こう側は × で、挟む相手の駒（自軍）がいないためです。× は軍を分断します。",
+                    result: "何も裏返りません。1 の向こう側は × で、自軍の駒がいないので挟めません。× は軍を分断します。",
                     focus: .cells([P(4, 3)]),
                     after: [
                         .sandwich(from: P(4, 4), direction: dir(0, -1), behind: 9, far: 0, enemy: 1),
@@ -462,7 +460,6 @@ public enum Tutorial {
     static let grayCell = TutorialScenario(
         id: .grayCell,
         title: "灰マスのルール",
-        summary: "灰マスには、置いて 1 枚以上裏返せるときしか置けない。",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -522,7 +519,6 @@ public enum Tutorial {
     static let passAndEnd = TutorialScenario(
         id: .passAndEnd,
         title: "パスとゲーム終了",
-        summary: "置ける場所が無いとパス。両者とも置けなくなるとゲーム終了で、駒の多い方が勝ち。",
         initial: GameState(
             board: Board(diagram: [
                 "b1 b4 b6 . b5 b2 b3 b8",

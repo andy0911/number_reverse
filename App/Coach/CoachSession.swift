@@ -2,7 +2,8 @@ import SwiftUI
 import NumberOthelloCore
 
 /// コーチモードの進行状態。本編の `GameViewModel` / `GameState` とは一切共有しない独立した状態。
-/// 盤面・ハイライト・説明文はすべて Core の `TutorialRun`（実際に `GameState` を動かした結果）から求める。
+/// 盤面とハイライト（裏返った駒など）は Core の `TutorialRun`（実際に `GameState` を動かした結果）から求める。
+/// 説明文は Core が定義した固定文で、併記された主張（claim）を `run()` が実エンジンの結果と照合済み。
 @MainActor
 @Observable
 final class CoachSession {
@@ -71,7 +72,7 @@ final class CoachSession {
         }
     }
 
-    /// 前の手順へ。直前に見ていた結果の状態で戻る
+    /// 前の手順へ。前の手順に実演があれば、その実演後の状態を表示する
     func back() {
         if stepIndex > 0 {
             stepIndex -= 1

@@ -4,7 +4,8 @@
 // - シナリオは初期盤面と手順（`TutorialStep`）の列で、手順ごとに実演（`TutorialDemo`）を `GameState` へ適用する。
 // - 説明文の主張は `TutorialClaim` として手順に併記し、`run()` が実行のたびに検証する。
 //   不一致は `TutorialRun.failures` に載る（テストで空であることを保証し、アプリでも警告表示に使う）。
-// - 画面のハイライト（裏返った駒など）も、宣言した座標ではなく実行で得た `GameEvent` から求める。
+// - 画面のハイライトのうち、置いた駒・裏返った駒は宣言した座標ではなく実行で得た `GameEvent` から求める
+//   （場所そのものを指す `.cells` だけは固定のマス。盤上のマスであることをテストで確認する）。
 // 具体的なシナリオは TutorialScenarios.swift。
 
 /// コーチモードで説明する項目（spec の節との対応は TutorialScenarios.swift の各シナリオを参照）
@@ -57,6 +58,8 @@ enum TutorialClaim: Hashable, Sendable {
     case score(Player, Int)
     case emptyCells(Set<Position>)
     case outcome(Outcome)
+    /// 手番のプレイヤーが、その駒をそのゾーンの空きマスすべて（1 つ以上）に置ける（spec §4.2 赤・青マスは常に可）
+    case canPlaceAnywhere(Zone, PieceKind)
     // 実演の結果（実演後の主張でのみ使える）
     /// この実演で裏返った（× になった）駒がちょうどこの集合
     case flipped(Set<Position>)
@@ -66,8 +69,13 @@ enum TutorialClaim: Hashable, Sendable {
     case passed(Player)
     /// 置いた直後（裏返す前）の盤面で、その方向の軍の合計。behind=置いた駒とその背後の自軍、far=挟んだ先の自軍、enemy=挟まれる相手の軍（spec §5.1, R-1）
     case sandwich(from: Position, direction: Direction, behind: Int, far: Int, enemy: Int)
-    /// 実演の代わりにこの操作をしていたら、裏返るのがちょうどこの集合（実演前の状態から試算）
-    case whatIf(TutorialAction, flipped: Set<Position>)
+    // 「もし〜だったら」の主張。実演前の状態から（`removing` のマスの駒を取り除いたうえで）操作を試算する
+    /// 実演の代わりにこの操作をしていたら、裏返るのがちょうどこの集合
+    case whatIf(TutorialAction, removing: Set<Position> = [], flipped: Set<Position>)
+    /// 実演の代わりにこの操作（駒を置く手）をしていたら、置いた直後（裏返す前）のその方向の軍の合計がこの値
+    case whatIfSums(TutorialAction, removing: Set<Position> = [], direction: Direction, behind: Int, far: Int, enemy: Int)
+    /// 実演の代わりにこの操作をしていたら、この理由で拒否される
+    case whatIfRejected(TutorialAction, MoveError)
 }
 
 /// 実演。`actions` を実際の `GameState` に順に適用する
@@ -95,7 +103,6 @@ public struct TutorialStep: Sendable {
 public struct TutorialScenario: Sendable, Identifiable {
     public let id: TutorialTopic
     public let title: String
-    public let summary: String
     public let initial: GameState
     public let steps: [TutorialStep]
 
@@ -115,11 +122,12 @@ public struct TutorialScenario: Sendable, Identifiable {
 /// 1 手順を実際に実行した結果
 public struct TutorialStepOutcome: Sendable {
     public let before: GameState
-    /// 実演後の状態（実演の無い手順、または拒否された実演では `before` と同じ）
+    /// 実演後の状態。実演の無い手順では `before` と同じ。
+    /// 拒否された操作自体は状態を変えない（複数操作の途中で拒否されたら、それまでに成功した操作の結果は残る）
     public let after: GameState
     /// 実演で起きた出来事（この手順の操作で新しく発生したもののみ）
     public let events: [GameEvent]
-    /// 実演が拒否された場合の理由。盤面は変化しない
+    /// 実演の操作がエンジンに拒否された場合の理由（拒否された操作は盤面を変えない）
     public let rejection: MoveError?
     /// 最後に置こうとした駒を置いた直後（裏返す前）の盤面。軍の合計の検証に使う
     let attemptedBoard: Board?
@@ -173,6 +181,14 @@ extension TutorialAction {
         }
     }
 
+    /// この操作の駒を置いた直後（裏返す前）の盤面。駒を置く手でなければ nil
+    func placedBoard(in state: GameState) -> Board? {
+        guard case .place(_, let kind, let position) = self else { return nil }
+        var board = state.board
+        board[position] = .piece(Piece(state.current, kind))
+        return board
+    }
+
     /// 実際の `GameState` に適用し、この操作で新しく起きたイベントを返す。
     /// `place` は events を作り直すが `chooseBombDirection` は追記するため、追記分だけを切り出す
     func apply(to state: inout GameState) throws(MoveError) -> [GameEvent] {
@@ -207,11 +223,7 @@ extension TutorialStep {
                 failures.append("\(label): \(action) の実行者が実際の手番と不一致")
                 break actions
             }
-            if case .place(_, let kind, let position) = action {
-                var trial = state.board
-                trial[position] = .piece(Piece(state.current, kind))
-                attemptedBoard = trial
-            }
+            attemptedBoard = action.placedBoard(in: state) ?? attemptedBoard
             do throws(MoveError) {
                 events += try action.apply(to: &state)
             } catch {
@@ -249,26 +261,67 @@ extension TutorialClaim {
         case .score(let player, let score): return state.score(of: player) == score
         case .emptyCells(let cells): return Set(state.board.emptyPositions) == cells
         case .outcome(let outcome): return state.outcome == outcome
+        case .canPlaceAnywhere(let zone, let kind):
+            let cells = state.board.emptyPositions.filter { Board.zone(of: $0) == zone }
+            return !cells.isEmpty && cells.allSatisfy { state.validate(Move(kind, at: $0)) == nil }
         case .flipped(let positions): return result?.flipped == positions
         case .rejected(let error): return result?.rejection == error
         case .passed(let player): return result?.events.contains(.passed(player)) ?? false
         case .sandwich(let from, let direction, let behind, let far, let enemy):
-            guard let board = result?.attemptedBoard, let placed = board[from].piece else { return false }
-            let enemyRun = board.run(from: from.moved(direction), direction: direction, owner: placed.owner.opponent)
-            guard let last = enemyRun.last else { return false }
-            let farRun = board.run(from: last.moved(direction), direction: direction, owner: placed.owner)
-            let behindRun = board.run(from: from, direction: direction.reversed, owner: placed.owner)
-            return board.sum(behindRun) == behind && board.sum(farRun) == far && board.sum(enemyRun) == enemy
-        case .whatIf(let action, let flipped):
+            guard let sums = result?.attemptedBoard?.armySums(from: from, direction: direction) else { return false }
+            return sums == (behind, far, enemy)
+        case .whatIf(let action, let removing, let flipped):
+            guard let trial = result?.before.trial(action, removing: removing) else { return false }
+            return TutorialStepOutcome.flippedPositions(in: trial.events) == flipped
+        case .whatIfSums(let action, let removing, let direction, let behind, let far, let enemy):
+            guard case .place(_, _, let from) = action,
+                  let trial = result?.before.trial(action, removing: removing),
+                  let sums = trial.placedBoard?.armySums(from: from, direction: direction) else { return false }
+            return sums == (behind, far, enemy)
+        case .whatIfRejected(let action, let expected):
             guard let before = result?.before, action.actor(in: before) == action.player else { return false }
-            var trial = before
-            guard let events = try? action.apply(to: &trial) else { return false }
-            return TutorialStepOutcome.flippedPositions(in: events) == flipped
+            var state = before
+            do throws(MoveError) {
+                _ = try action.apply(to: &state)
+                return false
+            } catch {
+                return error == expected
+            }
         }
     }
 }
 
+extension GameState {
+    /// この状態（から `removing` のマスの駒を取り除いた盤面）で `action` を試した結果。拒否される操作なら nil。
+    /// 取り除くと本戦（`.playing`）の状態から始めることになるので、初期配置の状態では `removing` を使わない
+    func trial(_ action: TutorialAction, removing: Set<Position>)
+        -> (events: [GameEvent], placedBoard: Board?)?
+    {
+        guard action.actor(in: self) == action.player else { return nil }
+        var state = self
+        if !removing.isEmpty {
+            var board = self.board
+            for position in removing { board[position] = .empty }
+            state = GameState(board: board, current: current, hands: hands)
+        }
+        let placedBoard = action.placedBoard(in: state)
+        guard let events = try? action.apply(to: &state) else { return nil }
+        return (events, placedBoard)
+    }
+}
+
 extension Board {
+    /// `p` に置かれた駒から `direction` 方向の軍の合計（spec §5.1, R-1）。相手が隣接していなければ nil。
+    /// behind=置いた駒とその背後の自軍、far=挟んだ先の自軍、enemy=挟まれる相手の軍。判定（`captures`）と同じ `run` / `sum` で数える
+    func armySums(from p: Position, direction: Direction) -> (behind: Int, far: Int, enemy: Int)? {
+        guard let placed = self[p].piece else { return nil }
+        let enemy = run(from: p.moved(direction), direction: direction, owner: placed.owner.opponent)
+        guard let last = enemy.last else { return nil }
+        let far = run(from: last.moved(direction), direction: direction, owner: placed.owner)
+        let behind = run(from: p, direction: direction.reversed, owner: placed.owner)
+        return (sum(behind), sum(far), sum(enemy))
+    }
+
     /// 盤面を 8 行のテキストで記述する。トークンは空白区切りで
     /// `.` 空 / `x` 荒地 / `a<k>` 先行 / `b<k>` 後攻（k は 1-9・T・B）
     init(diagram rows: [String]) {

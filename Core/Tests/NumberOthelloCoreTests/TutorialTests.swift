@@ -1,6 +1,11 @@
 import Testing
 @testable import NumberOthelloCore
 
+extension Tutorial {
+    /// テスト用: 説明項目からシナリオを引く
+    static func scenario(_ topic: TutorialTopic) -> TutorialScenario { scenarios.first { $0.id == topic }! }
+}
+
 /// コーチモードのシナリオが、実際の `GameState`（エンジン）の挙動と食い違っていないことを検証する。
 ///
 /// 3 層で保証する:
@@ -31,6 +36,17 @@ struct TutorialClaimsTests {
                 }
             }
             #expect(declaresOutcome, "\(topic)「\(step.title)」の実演が結果を主張していない")
+        }
+    }
+
+    @Test("固定のマスを指すコーチマークは盤上のマスを指している", arguments: TutorialTopic.allCases)
+    func fixedFocusCellsAreOnBoard(topic: TutorialTopic) {
+        for step in Tutorial.scenario(topic).steps {
+            for focus in [step.focus, step.demo?.resultFocus ?? .none] {
+                if case .cells(let cells) = focus {
+                    #expect(!cells.isEmpty && cells.allSatisfy(\.isOnBoard), "\(topic)「\(step.title)」")
+                }
+            }
         }
     }
 
@@ -76,6 +92,7 @@ struct TutorialNarrationTests {
         // 赤マスでも相手の陣には置けない / 初期配置に T は使えない
         #expect(throws: MoveError.invalidSetupCell) { try state.place(.number(5), at: Position(3, 3)) }
         #expect(throws: MoveError.numberRequiredInSetup) { try state.place(.tank, at: Position(4, 3)) }
+        #expect(throws: MoveError.numberRequiredInSetup) { try state.place(.bomb, at: Position(4, 3)) }
         // 赤に 1 枚ずつ → 青に 2 枚ずつの 6 手。裏返しは起きない
         try state.place(.number(5), at: at(4, 3))
         try state.place(.number(5), at: at(3, 4))
@@ -88,6 +105,10 @@ struct TutorialNarrationTests {
         #expect(state.score(of: .first) == 3)
         #expect(state.score(of: .second) == 3)
         #expect(state.events.allSatisfy { if case .flipped = $0 { false } else { true } })
+        // 本戦の青マスは、空いていればどこにでも置ける（隣接不要）
+        let emptyBlue = Set(state.board.emptyPositions.filter { Board.zone(of: $0) == .blue })
+        let placeableBlue = Set(state.legalMoves().filter { $0.kind == .number(5) && Board.zone(of: $0.position) == .blue }.map(\.position))
+        #expect(!emptyBlue.isEmpty && placeableBlue == emptyBlue)
     }
 
     @Test("駒の裏返り: 9 と 5 で 6 を挟むと先行の 4、3 と 3 で 4 を挟むと後攻の 6")
@@ -246,7 +267,7 @@ struct TutorialVerificationTests {
         let demo = TutorialDemo(buttonTitle: "", actions: actions, result: "", resultFocus: .none, after: after)
         let step = TutorialStep(title: "検証用", lead: "", focus: .none, demo: demo, before: before)
         let base = Tutorial.scenario(.tie)
-        return TutorialScenario(id: .tie, title: "", summary: "", initial: base.initial, steps: [step]).run()
+        return TutorialScenario(id: .tie, title: "", initial: base.initial, steps: [step]).run()
     }
 
     private let truth: [TutorialClaim] = [
@@ -254,6 +275,10 @@ struct TutorialVerificationTests {
         .flipped([]),
         .cell(Position(4, 2), .piece(Piece(.second, .number(5)))),
         .whatIf(.place(.first, .number(3), at: Position(4, 3)), flipped: [Position(4, 2)]),
+        .whatIfSums(.place(.first, .number(3), at: Position(4, 3)), direction: Direction(dr: 0, dc: -1), behind: 3, far: 3, enemy: 5),
+        // 左隣の 3 を取り除くと、挟む先の自軍がいなくなり裏返らない
+        .whatIf(.place(.first, .number(2), at: Position(4, 3)), removing: [Position(4, 1)], flipped: []),
+        .whatIfSums(.place(.first, .number(2), at: Position(4, 3)), removing: [Position(4, 1)], direction: Direction(dr: 0, dc: -1), behind: 2, far: 0, enemy: 5),
     ]
 
     @Test("正しい主張は通る（検証が常に失敗する状態ではない）")
@@ -269,6 +294,12 @@ struct TutorialVerificationTests {
         .whatIf(.place(.first, .number(3), at: Position(4, 3)), flipped: []),
         .whatIf(.place(.first, .number(2), at: Position(4, 3)), flipped: [Position(4, 2)]),
         .rejected(.grayRequiresCapture),
+        .whatIfSums(.place(.first, .number(3), at: Position(4, 3)), direction: Direction(dr: 0, dc: -1), behind: 3, far: 3, enemy: 4),
+        .whatIfSums(.place(.first, .number(3), at: Position(4, 3)), removing: [Position(4, 1)], direction: Direction(dr: 0, dc: -1), behind: 3, far: 3, enemy: 5),
+        .whatIf(.place(.first, .number(2), at: Position(4, 3)), removing: [Position(4, 1)], flipped: [Position(4, 2)]),
+        .whatIfRejected(.place(.first, .number(3), at: Position(4, 3)), .occupied),
+        .whatIfRejected(.place(.first, .bomb, at: Position(4, 3)), .occupied),
+        .canPlaceAnywhere(.gray, .number(1)),
         .passed(.second),
         .score(.first, 99),
         .phase(.finished),
