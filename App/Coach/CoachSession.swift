@@ -45,8 +45,9 @@ final class CoachSession {
     var focusCells: Set<Position> { outcome.cells(for: focus, afterDemo: showsResult).union(placed) }
     var text: String { showsResult ? step.demo?.result ?? step.lead : step.lead }
 
-    /// 実演がエンジンに拒否された（置けなかった）とき、その理由
+    /// 実演がエンジンに拒否された（置けなかった）とき、その理由と、置こうとしたマス
     var rejection: MoveError? { showsResult ? outcome.rejection : nil }
+    var rejectedCell: Position? { showsResult ? outcome.rejectedCell : nil }
 
     /// 説明文の主張が実エンジンの結果と一致しなかった手順があるか（テストで防いでいるため通常は起きない）
     var hasVerificationFailure: Bool { !run.failures.isEmpty }

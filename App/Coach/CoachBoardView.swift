@@ -9,8 +9,9 @@ struct CoachBoardView: View {
     let focusCells: Set<Position>
     let flipped: Set<Position>
     let placed: Set<Position>
-    /// 実演が拒否された（置けなかった）とき、リングを赤にする
-    let isRejected: Bool
+    /// 実演が拒否された（置けなかった）とき、置こうとしたマス。そのマスだけリングを赤にする
+    /// （本編では赤は「直前に裏返った」を意味するため、他のマスには使わない）
+    let rejectedCell: Position?
     /// 吹き出しの矢印が指す x 座標（盤面左端が 0）。指す対象が無いとき nil
     @Binding var anchorX: CGFloat?
 
@@ -111,16 +112,15 @@ struct CoachBoardView: View {
 
     /// 指し示すマスの縁取り。ゾーン全体（多数のマス）を指すときは付けず、スポットライトだけにする
     @ViewBuilder private var rings: some View {
-        let ringColor: Color = isRejected ? .red : .white
         ZStack {
-            if case .zone = focus {
+            if case .zones = focus {
                 EmptyView()
             } else {
                 ForEach(Array(focusCells), id: \.self) { p in
                     if let rect = frames[p] {
                         RoundedRectangle(cornerRadius: 4)
                             .strokeBorder(.black, lineWidth: 5)
-                            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(ringColor, lineWidth: 3))
+                            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(p == rejectedCell ? .red : .white, lineWidth: 3))
                             .frame(width: rect.width, height: rect.height)
                             .position(x: rect.midX, y: rect.midY)
                     }
@@ -136,7 +136,7 @@ struct CoachBoardView: View {
                     path.move(to: CGPoint(x: left.minX, y: y))
                     path.addLine(to: CGPoint(x: right.maxX, y: y))
                 }
-                .stroke(ringColor, style: StrokeStyle(lineWidth: 3, dash: [8, 5]))
+                .stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [8, 5]))
             }
         }
         .opacity(pulse ? 1 : 0.55)

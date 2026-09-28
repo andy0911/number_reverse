@@ -8,8 +8,9 @@ extension Tutorial {
 
 /// コーチモードのシナリオが、実際の `GameState`（エンジン）の挙動と食い違っていないことを検証する。
 ///
-/// 3 層で保証する:
-/// 1. `TutorialClaimsTests`: 全シナリオの全主張（説明文に併記した事実）が `run()` で実エンジンの結果と一致する
+/// 3 層で確認する。ただし文章そのものは検証対象ではない（文章と claim の対応は執筆時のレビューに依存する）:
+/// 1. `TutorialClaimsTests`: 全シナリオの全主張（説明文に併記した claim）が `run()` で実エンジンの結果と一致する。
+///    加えて、文中の「a + b = c」の算術が正しく、その数値が claim に現れることを確認する
 /// 2. `TutorialNarrationTests`: 説明文が述べる主要な事実を、`run()` を介さず `GameState` を直接動かして独立に確認する
 /// 3. `TutorialVerificationTests`: 主張の検証機構が、嘘の主張を実際に検出できる（空振りしない）
 @Suite("コーチモード: 主張の検証")
@@ -50,6 +51,24 @@ struct TutorialClaimsTests {
         }
     }
 
+    @Test("文中の「a + b = c」は算術が正しく、数値が claim に現れる", arguments: TutorialTopic.allCases)
+    func arithmeticInNarrationMatchesClaims(topic: TutorialTopic) {
+        let scenario = Tutorial.scenario(topic)
+        let backed = scenario.claimNumbers
+        for step in scenario.steps {
+            for text in [step.title, step.lead, step.demo?.result ?? ""] {
+                for match in text.matches(of: /(\d+(?: \+ \d+)+) = (\d+)/) {
+                    let terms = match.1.split(separator: " + ").compactMap { Int($0) }
+                    let total = Int(match.2)!
+                    #expect(terms.reduce(0, +) == total, "\(topic)「\(step.title)」: \(match.0) の算術が誤り")
+                    for n in terms + [total] {
+                        #expect(backed.contains(n), "\(topic)「\(step.title)」: \(match.0) の \(n) が claim に現れない")
+                    }
+                }
+            }
+        }
+    }
+
     @Test("ハイライトは実行結果から求める: 裏返った駒・置かれた駒・ゾーン")
     func focusCellsComeFromTheRun() throws {
         let run = Tutorial.scenario(.flip).run()
@@ -58,8 +77,14 @@ struct TutorialClaimsTests {
         #expect(demoStep.cells(for: .flipped, afterDemo: false).isEmpty)
         #expect(demoStep.cells(for: .flipped, afterDemo: true) == [Position(5, 2)])
         #expect(demoStep.cells(for: .placed, afterDemo: true) == [Position(4, 3)])
-        #expect(demoStep.cells(for: .zone(.red), afterDemo: false).count == 4)
+        #expect(demoStep.cells(for: .zones([.red]), afterDemo: false).count == 4)
+        #expect(demoStep.cells(for: .zones([.red, .blue]), afterDemo: false).count == 36)
         #expect(demoStep.cells(for: .divider, afterDemo: false).isEmpty)
+        // 拒否された実演は、置こうとしたマスを返す（赤リングはそのマスだけに付ける）
+        let rejected = Tutorial.scenario(.zones).run().steps[2]
+        #expect(rejected.rejection == .invalidSetupCell)
+        #expect(rejected.rejectedCell == Position(3, 3))
+        #expect(demoStep.rejectedCell == nil)
         // 爆発方向の選択は events に追記されるが、この手順で新しく起きた裏返りだけを返す
         let bomb = Tutorial.scenario(.bombExplosion).run()
         #expect(bomb.steps[1].flipped == [Position(4, 2)])
@@ -109,6 +134,10 @@ struct TutorialNarrationTests {
         let emptyBlue = Set(state.board.emptyPositions.filter { Board.zone(of: $0) == .blue })
         let placeableBlue = Set(state.legalMoves().filter { $0.kind == .number(5) && Board.zone(of: $0.position) == .blue }.map(\.position))
         #expect(!emptyBlue.isEmpty && placeableBlue == emptyBlue)
+        // 赤マスも本戦では空いていればどこにでも置ける（相手の陣側の (3,3) も含む。初期配置とは違う）
+        let emptyRed = Set(state.board.emptyPositions.filter { Board.zone(of: $0) == .red })
+        let placeableRed = Set(state.legalMoves().filter { $0.kind == .number(5) && Board.zone(of: $0.position) == .red }.map(\.position))
+        #expect(emptyRed == [at(3, 3), at(4, 4)] && placeableRed == emptyRed)
     }
 
     @Test("駒の裏返り: 9 と 5 で 6 を挟むと先行の 4、3 と 3 で 4 を挟むと後攻の 6")
@@ -253,6 +282,28 @@ struct TutorialNarrationTests {
         #expect(state.outcome == .win(.first))
         #expect(state.board.emptyPositions == [at(7, 7)])
     }
+
+    @Test("同数なら引き分け（パスと終了の説明）")
+    func drawWhenEqual() throws {
+        // 空きは青マス (1,1)・(1,2) だけ。埋め終わると先行 2・後攻 2（× は数えない）
+        var state = GameState(
+            board: makeBoard([
+                "x x x x x x x x",
+                "x . . x x x x x",
+                "x x a5 x x x x x",
+                "x x x b5 x x x x",
+                "x x x x x x x x",
+                "x x x x x x x x",
+                "x x x x x x x x",
+                "x x x x x x x x",
+            ]), current: .first)
+        try state.place(.number(5), at: at(1, 1))
+        try state.place(.number(5), at: at(1, 2))
+        #expect(state.phase == .finished)
+        #expect(state.score(of: .first) == 2)
+        #expect(state.score(of: .second) == 2)
+        #expect(state.outcome == .draw)
+    }
 }
 
 /// 検証機構そのものの確認。嘘の主張を書いたら `failures` に載ること
@@ -328,5 +379,47 @@ struct TutorialVerificationTests {
         let result = run(actions: wrongActor, after: [.flipped([])])
         #expect(!result.failures.isEmpty)
         #expect(result.steps[0].after.board[Position(4, 3)] == .empty)
+    }
+}
+
+// MARK: - 算術チェック用（テスト専用）
+
+private extension TutorialClaim {
+    /// この claim が裏付ける数値（駒の値、軍の合計とその和、スコア・枚数）
+    var numbers: Set<Int> {
+        switch self {
+        case .cell(_, .piece(let piece)): piece.kind.isNumber ? [piece.kind.value] : []
+        case .sandwich(_, _, let behind, let far, let enemy),
+             .whatIfSums(_, _, _, let behind, let far, let enemy):
+            [behind, far, enemy, behind + far]
+        case .score(_, let n), .zoneCount(_, let n), .handCount(_, _, let n): [n]
+        default: []
+        }
+    }
+}
+
+private extension TutorialAction {
+    var pieceValue: Int? {
+        if case .place(_, .number(let n), _) = self { n } else { nil }
+    }
+}
+
+private extension TutorialScenario {
+    /// シナリオの claim と、実演・反実仮想で置く数字駒の値
+    var claimNumbers: Set<Int> {
+        var numbers: Set<Int> = []
+        for step in steps {
+            let claims = step.before + (step.demo?.after ?? [])
+            for claim in claims {
+                numbers.formUnion(claim.numbers)
+                switch claim {
+                case .whatIf(let action, _, _), .whatIfSums(let action, _, _, _, _, _), .whatIfRejected(let action, _):
+                    numbers.formUnion(action.pieceValue.map { [$0] } ?? [])
+                default: break
+                }
+            }
+            for action in step.demo?.actions ?? [] { numbers.formUnion(action.pieceValue.map { [$0] } ?? []) }
+        }
+        return numbers
     }
 }

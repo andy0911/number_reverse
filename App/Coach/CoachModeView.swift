@@ -19,7 +19,7 @@ struct CoachModeView: View {
                 focusCells: session.focusCells,
                 flipped: session.flipped,
                 placed: session.placed,
-                isRejected: session.rejection != nil,
+                rejectedCell: session.rejectedCell,
                 anchorX: $anchorX
             )
             // 盤面を最優先で幅いっぱいに描く（吹き出しの矢印は盤面と同じ左端・幅を前提に位置を合わせる）

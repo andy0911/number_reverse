@@ -2,7 +2,11 @@
 //
 // 執筆ルール（事実と異なる説明を防ぐ）:
 // - 説明文に書く「盤面の事実」「裏返る/裏返らない」「置ける/置けない」「合計の数値」は、
-//   必ず同じ手順の `before` / `after` に主張として併記する（TutorialTests が実エンジンで検証する）。
+//   同じ手順の `before` / `after` に claim として併記する。claim は TutorialTests と実行時に実エンジンと照合される。
+//   文章そのものは自動では検証されず、claim への書き漏らしも検出されない（「a + b = c」の算術だけはテストが確認する）。
+//   文章を直したら claim を、claim を直したら文章を、必ず見直す。
+// - 一般化に注意する。数字駒にだけ当てはまる規則（表裏を足すと 10、合計の比較）を「駒」全般と書かない
+//   （T・B は裏が ×、T は数を無視、B は攻撃しない）。初期配置と本戦でも規則が違う（置ける場所、点線の意味）。
 // - 座標は (row, col)。row 0 が上（後攻側）、row 7 が下（先行側）。説明文には座標を書かない。
 // - 1 シナリオ内の操作は手番どおりに並べる（先行の実演の次は後攻の手番）。
 
@@ -48,7 +52,7 @@ public enum Tutorial {
             step(
                 "赤マス（初期配置）",
                 "中央の 4 マスは赤マスです。ゲームが始まると、まず「初期配置」で、この赤マスに最初の駒を置きます。",
-                focus: .zone(.red),
+                focus: .zones([.red]),
                 before: [.zoneCount(.red, 4), .phase(.setup(step: 0))]),
             step(
                 "点線（陣の境目）",
@@ -63,7 +67,7 @@ public enum Tutorial {
                 demo: demo(
                     "上側の赤マスに置いてみる",
                     [.place(.first, .number(5), at: P(3, 3))],
-                    result: "置けませんでした。点線の上側は後攻の陣なので、先行は置けません。",
+                    result: "置けませんでした。点線の上側は後攻の陣なので、先行は置けません（初期配置のとき。本戦では点線に関係なく置けます）。",
                     focus: .cells([P(3, 3)]),
                     after: [.rejected(.invalidSetupCell), .cell(P(3, 3), .empty)])),
             step(
@@ -108,14 +112,17 @@ public enum Tutorial {
                         .cell(P(1, 1), b(6)), .zone(P(1, 1), .blue), .side(P(1, 1), .second),
                     ])),
             step(
-                "青マス",
-                "内側の 32 マスは青マスです。本戦では、空いていればいつでも置けます。",
-                focus: .zone(.blue),
-                before: [.zoneCount(.blue, 32), .phase(.playing), .canPlaceAnywhere(.blue, .number(5))]),
+                "青マスと赤マス（本戦）",
+                "内側の 32 マスは青マスです。赤マスと青マスは、本戦では空いていれば、陣に関係なくいつでも置けます（自陣に限られるのは初期配置のときだけです）。",
+                focus: .zones([.blue, .red]),
+                before: [
+                    .zoneCount(.blue, 32), .phase(.playing),
+                    .canPlaceAnywhere(.blue, .number(5)), .canPlaceAnywhere(.red, .number(5)),
+                ]),
             step(
                 "灰マス",
                 "外周の 28 マスは灰マスです。ここには、置いた駒で相手の駒を 1 枚以上裏返せるときにしか置けません（くわしくは「灰マスのルール」で）。",
-                focus: .zone(.gray),
+                focus: .zones([.gray]),
                 before: [.zoneCount(.gray, 28)]),
         ])
 
@@ -123,7 +130,7 @@ public enum Tutorial {
 
     static let flip = TutorialScenario(
         id: .flip,
-        title: "駒の裏返り（n と 10−n）",
+        title: "数字駒の裏返り（n と 10−n）",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow, emptyRow,
@@ -151,8 +158,8 @@ public enum Tutorial {
                         .flipped([P(5, 2)]), .cell(P(5, 2), a(4)), .cell(P(4, 3), a(9)),
                     ])),
             step(
-                "裏返ると 10 − n",
-                "駒は両面あり、表と裏の数字を足すと 10 になります（6 の裏は 4）。今度は後攻が 3 を置いて、先行の 4 を挟み返します。",
+                "数字駒は裏返ると 10 − n",
+                "数字の駒は両面あり、表と裏の数字を足すと 10 になります（6 の裏は 4）。今度は後攻が 3 を置いて、先行の 4 を挟み返します。",
                 focus: .cells([P(5, 1), P(5, 2), P(5, 3)]),
                 before: [.cell(P(5, 2), a(4)), .cell(P(5, 3), b(3)), .current(.second)],
                 demo: demo(
@@ -184,13 +191,13 @@ public enum Tutorial {
                 focus: .cells([P(4, 1), P(4, 2)]),
                 before: [.cell(P(4, 1), a(3)), .cell(P(4, 2), b(5)), .current(.first)]),
             step(
-                "同じ値は裏返らない",
+                "同じ合計は裏返らない",
                 "先行が 2 を置くと、2 と 3 で後攻の 5 を挟みます。自軍の合計は 2 + 3 = 5、相手も 5 です。",
                 focus: .cells([P(4, 1), P(4, 2), P(4, 3)]),
                 demo: demo(
                     "先行が 2 を置く",
                     [.place(.first, .number(2), at: P(4, 3))],
-                    result: "裏返りませんでした。数字の駒では、同じ値では裏返らず、自軍の合計が相手を「上回った」ときだけ裏返ります。もし 3 を置いていれば、3 + 3 = 6 が 5 を上回り、裏返っていました。",
+                    result: "裏返りませんでした。数字の駒では、同じ合計では裏返らず、自軍の合計が相手を「上回った」ときだけ裏返ります。もし 3 を置いていれば、3 + 3 = 6 が 5 を上回り、裏返っていました。",
                     focus: .cells([P(4, 2)]),
                     after: [
                         .sandwich(from: P(4, 3), direction: dir(0, -1), behind: 2, far: 3, enemy: 5),
@@ -560,7 +567,7 @@ public enum Tutorial {
                 demo: demo(
                     "先行が 9 を置く",
                     [.place(.first, .number(9), at: P(0, 3))],
-                    result: "3 枚が裏返りました。残る灰マスは誰にも裏返せないので、両者とも置けなくなり、盤が埋まらなくてもゲーム終了です。勝敗は盤上の自分の駒の数で決まり（× は数えません）、先行が 32 対 28 で勝ちです。",
+                    result: "3 枚が裏返りました。残る灰マスは誰にも裏返せないので、両者とも置けなくなり、盤が埋まらなくてもゲーム終了です。勝敗は盤上の自分の駒の数で決まり（× は数えません。同数なら引き分けです）、先行が 32 対 28 で勝ちです。",
                     focus: .flipped,
                     after: [
                         .sandwich(from: P(0, 3), direction: dir(1, 0), behind: 9, far: 9, enemy: 4),

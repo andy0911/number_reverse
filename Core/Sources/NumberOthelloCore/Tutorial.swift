@@ -1,9 +1,13 @@
 // コーチモード（遊び方の説明）のモデルと検証。
 //
-// 設計方針: 説明文が「〜すると裏返ります」と述べるとき、その主張は必ず実際の `GameState` を動かした結果と照合する。
+// 設計方針: 盤面の変化（置く・裏返る・拒否される・爆発する）は、実際の `GameState` を動かした結果で描く。
 // - シナリオは初期盤面と手順（`TutorialStep`）の列で、手順ごとに実演（`TutorialDemo`）を `GameState` へ適用する。
-// - 説明文の主張は `TutorialClaim` として手順に併記し、`run()` が実行のたびに検証する。
-//   不一致は `TutorialRun.failures` に載る（テストで空であることを保証し、アプリでも警告表示に使う）。
+// - 説明文は固定の文章で、文章そのものは自動では検証されない。代わりに、文章が述べる主な事実
+//   （盤面の状態、裏返る集合、軍の合計値、拒否理由など）を `TutorialClaim` として手順に併記し、
+//   `run()` が実行のたびに実エンジンの結果と照合する。不一致は `TutorialRun.failures` に載る
+//   （テストで空であることを保証し、アプリでも警告表示に使う）。
+//   照合できるのは併記した claim だけ。文章と claim の対応（文章が述べた事実を claim に書き漏らしていないか）は
+//   執筆時の規約（TutorialScenarios.swift 冒頭）とレビューで保つ。文中の「a + b = c」の算術だけはテストが確認する。
 // - 画面のハイライトのうち、置いた駒・裏返った駒は宣言した座標ではなく実行で得た `GameEvent` から求める
 //   （場所そのものを指す `.cells` だけは固定のマス。盤上のマスであることをテストで確認する）。
 // 具体的なシナリオは TutorialScenarios.swift。
@@ -35,8 +39,8 @@ public enum TutorialFocus: Hashable, Sendable {
     case none
     /// 盤上の固定のマス（その場所自体を説明するとき）
     case cells([Position])
-    /// あるゾーンのマスすべて
-    case zone(Zone)
+    /// 指定したゾーンのマスすべて
+    case zones([Zone])
     /// 陣の境目の点線
     case divider
     /// 実演で実際に置かれた駒（実行結果から求める）
@@ -129,6 +133,8 @@ public struct TutorialStepOutcome: Sendable {
     public let events: [GameEvent]
     /// 実演の操作がエンジンに拒否された場合の理由（拒否された操作は盤面を変えない）
     public let rejection: MoveError?
+    /// 拒否された操作が置こうとしたマス（`rejection` がある場合のみ）
+    public let rejectedCell: Position?
     /// 最後に置こうとした駒を置いた直後（裏返す前）の盤面。軍の合計の検証に使う
     let attemptedBoard: Board?
     /// 主張が実際の挙動と一致しなかった箇所（空であるべき）
@@ -145,7 +151,7 @@ public struct TutorialStepOutcome: Sendable {
         switch focus {
         case .none, .divider: []
         case .cells(let cells): Set(cells)
-        case .zone(let zone): Set(Board.allPositions.filter { Board.zone(of: $0) == zone })
+        case .zones(let zones): Set(Board.allPositions.filter { zones.contains(Board.zone(of: $0)) })
         case .placed: afterDemo ? placed : []
         case .flipped: afterDemo ? flipped : []
         }
@@ -170,6 +176,11 @@ extension TutorialAction {
         switch self {
         case .place(let player, _, _), .chooseBomb(let player, _): player
         }
+    }
+
+    /// 駒を置く手ならその置き場所
+    var position: Position? {
+        if case .place(_, _, let position) = self { position } else { nil }
     }
 
     /// 今この操作を行うべきプレイヤー（置く手は手番、爆発方向は爆弾の持ち主）
@@ -211,12 +222,14 @@ extension TutorialStep {
             .map { "\(label): 実演前の主張が実際の状態と不一致 \($0)" }
         guard let demo else {
             return TutorialStepOutcome(
-                before: start, after: start, events: [], rejection: nil, attemptedBoard: nil, failures: failures)
+                before: start, after: start, events: [], rejection: nil, rejectedCell: nil,
+                attemptedBoard: nil, failures: failures)
         }
 
         var state = start
         var events: [GameEvent] = []
         var rejection: MoveError?
+        var rejectedCell: Position?
         var attemptedBoard: Board?
         actions: for action in demo.actions {
             guard action.actor(in: state) == action.player else {
@@ -228,12 +241,13 @@ extension TutorialStep {
                 events += try action.apply(to: &state)
             } catch {
                 rejection = error
+                rejectedCell = action.position
                 break actions
             }
         }
 
         var outcome = TutorialStepOutcome(
-            before: start, after: state, events: events, rejection: rejection,
+            before: start, after: state, events: events, rejection: rejection, rejectedCell: rejectedCell,
             attemptedBoard: attemptedBoard, failures: failures)
         if let rejection, !demo.after.contains(.rejected(rejection)) {
             outcome.failures.append("\(label): 想定外の拒否 \(rejection)")
