@@ -102,7 +102,7 @@ struct TutorialClaimsTests {
         // 爆発方向の選択は events に追記されるが、この手順で新しく起きた裏返りだけを返す
         let bomb = Tutorial.scenario(.bombExplosion).run()
         #expect(bomb.steps[1].flipped == [Position(4, 2)])
-        #expect(bomb.steps[2].flipped.count == 5)
+        #expect(bomb.steps[2].flipped.count == 3)
     }
 }
 
@@ -231,7 +231,7 @@ struct TutorialNarrationTests {
         #expect(number.board[at(4, 2)] == piece(.first, .number(9)))
     }
 
-    @Test("爆発: 持ち主（後攻）が選び、上下左右なら 5 枚・斜めなら 2 枚が裏返り、自駒は裏返らない")
+    @Test("爆発: 持ち主（後攻）が選び、各方向で最初に見つかった駒だけ裏返る（自駒に当たると不発）")
     func bombExplosion() throws {
         var state = Tutorial.scenario(.bombExplosion).initial
         try state.place(.number(1), at: at(4, 3))
@@ -246,12 +246,15 @@ struct TutorialNarrationTests {
         try state.chooseBombDirection(.cross)
         #expect(state.phase == .playing)
         #expect(state.current == .second)
-        #expect(state.board[at(0, 2)] == piece(.second, .number(8)))
-        #expect(state.board[at(7, 2)] == piece(.second, .number(3)))
+        // 左・右・下は最初に見つかった駒が先行 → 裏返る
         #expect(state.board[at(4, 1)] == piece(.second, .number(1)))
         #expect(state.board[at(4, 3)] == piece(.second, .number(9)))
-        #expect(state.board[at(4, 5)] == piece(.second, .number(6)))
+        #expect(state.board[at(7, 2)] == piece(.second, .number(3)))
+        // 上は最初に見つかった駒が後攻自身（不発）。その先の (0,2) には届かない
         #expect(state.board[at(2, 2)] == piece(.second, .number(3)))
+        #expect(state.board[at(0, 2)] == piece(.first, .number(2)))
+        // 右方向は (4,3) で止まるため、その先の (4,5) にも届かない
+        #expect(state.board[at(4, 5)] == piece(.first, .number(4)))
         // 斜め上の (1,5) は上下左右では裏返らない
         #expect(state.board[at(1, 5)] == piece(.first, .number(8)))
     }
