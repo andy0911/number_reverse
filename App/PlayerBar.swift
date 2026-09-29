@@ -20,7 +20,7 @@ struct PlayerBar: View {
         }
         .padding(10)
         // ガラスの上に、手番の強調（プレイヤー色の枠）を重ねる
-        .chromeGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(isActive ? player.color : .clear, lineWidth: 3)

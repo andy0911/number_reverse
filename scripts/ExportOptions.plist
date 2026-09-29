@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Store Connect 向け（TestFlight もこの方式）。キーと値は `xcodebuild -help` の exportOptionsPlist 一覧に準拠 -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<!-- export: ローカルに .ipa を書き出す / upload: App Store Connect に送信する。scripts/testflight.sh が切り替える -->
+	<key>destination</key>
+	<string>export</string>
+	<key>teamID</key>
+	<string>377M4Z6S57</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<!-- 同じビルド番号が既に使われていた場合、アップロード時に Xcode が番号を繰り上げる -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<true/>
+</dict>
+</plist>

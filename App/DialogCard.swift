@@ -12,12 +12,12 @@ struct DialogCard<Actions: View>: View {
             VStack(spacing: 16) {
                 Text(title).font(.title2.bold())
                 Text(subtitle).font(.subheadline).multilineTextAlignment(.center)
-                ChromeGlassGroup {
+                GlassEffectContainer {
                     HStack(spacing: 12) { actions }
                 }
             }
             .padding(24)
-            .chromeGlass(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding(32)
         }
     }

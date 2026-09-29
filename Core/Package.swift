@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "NumberOthelloCore",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS("26.5"), .macOS(.v14)],
     products: [
         .library(name: "NumberOthelloCore", targets: ["NumberOthelloCore"]),
     ],
