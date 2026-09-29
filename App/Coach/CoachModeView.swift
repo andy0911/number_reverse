@@ -30,6 +30,8 @@ struct CoachModeView: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
+        // fullScreenCover の中身は、アプリ全体の背景（NumberOthelloApp の ChromeBackdrop）の外になるため、ここにも敷く
+        .background { ChromeBackdrop() }
     }
 
     // MARK: - ヘッダー（終了・スキップ・レッスン一覧）
@@ -39,11 +41,13 @@ struct CoachModeView: View {
             HStack {
                 Button("終了", systemImage: "xmark", action: exit)
                     .labelStyle(.titleAndIcon)
+                    .chromeButtonStyle()
                 Spacer()
                 Button(session.isLastLesson ? "スキップ（終了）" : "スキップ", systemImage: "forward.end") {
                     if session.isLastLesson { exit() } else { session.skipLesson() }
                 }
                 .labelStyle(.titleAndIcon)
+                .chromeButtonStyle()
             }
             Menu {
                 ForEach(Array(session.lessonTitles.enumerated()), id: \.offset) { index, title in
@@ -86,29 +90,32 @@ struct CoachModeView: View {
 
     // MARK: - 操作ボタン
 
+    /// 主操作（実演・次へ）は `chromeProminentButtonStyle`、副操作（戻る・もう一度）は `chromeButtonStyle`（本編の chrome と同じ）
     private var controls: some View {
-        HStack(spacing: 10) {
-            Button("戻る", systemImage: "chevron.left") { session.back() }
-                .buttonStyle(.bordered)
-                .disabled(session.isFirstStep)
-            if let demo = session.step.demo, session.canPerform {
-                Button {
-                    session.perform()
-                } label: {
-                    Label(demo.buttonTitle, systemImage: "play.fill").frame(maxWidth: .infinity)
+        ChromeGlassGroup {
+            HStack(spacing: 10) {
+                Button("戻る", systemImage: "chevron.left") { session.back() }
+                    .chromeButtonStyle()
+                    .disabled(session.isFirstStep)
+                if let demo = session.step.demo, session.canPerform {
+                    Button {
+                        session.perform()
+                    } label: {
+                        Label(demo.buttonTitle, systemImage: "play.fill").frame(maxWidth: .infinity)
+                    }
+                    .chromeProminentButtonStyle()
+                } else {
+                    if session.step.demo != nil {
+                        Button("もう一度", systemImage: "arrow.counterclockwise") { session.replay() }
+                            .chromeButtonStyle()
+                    }
+                    Button {
+                        if session.isLastStep { exit() } else { session.next() }
+                    } label: {
+                        Text(session.isLastStep ? "完了" : "次へ").frame(maxWidth: .infinity)
+                    }
+                    .chromeProminentButtonStyle()
                 }
-                .buttonStyle(.borderedProminent)
-            } else {
-                if session.step.demo != nil {
-                    Button("もう一度", systemImage: "arrow.counterclockwise") { session.replay() }
-                        .buttonStyle(.bordered)
-                }
-                Button {
-                    if session.isLastStep { exit() } else { session.next() }
-                } label: {
-                    Text(session.isLastStep ? "完了" : "次へ").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
             }
         }
         .controlSize(.large)

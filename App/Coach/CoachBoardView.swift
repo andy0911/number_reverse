@@ -1,8 +1,8 @@
 import SwiftUI
 import NumberOthelloCore
 
-/// コーチモード用の盤面。マスの描画は本編と同じ `CellView` を使い、その上に
-/// コーチマーク（スポットライトとリング）を重ねる。マスの位置は描画結果（preference）から取得する。
+/// コーチモード用の盤面。盤の入れ物は本編と共通の `BoardFrame`、マスの描画も本編と同じ `CellView` を使い、
+/// その上にコーチマーク（スポットライトとリング）を重ねる。マスの位置は描画結果（preference）から取得する。
 struct CoachBoardView: View {
     let state: GameState
     let focus: TutorialFocus
@@ -21,38 +21,17 @@ struct CoachBoardView: View {
     private static let space = "coachBoard"
 
     var body: some View {
-        Grid(horizontalSpacing: 1, verticalSpacing: 1) {
-            ForEach(0..<Board.size, id: \.self) { r in
-                GridRow {
-                    ForEach(0..<Board.size, id: \.self) { c in
-                        cell(Position(r, c))
-                    }
-                }
+        // グリッド・枠・点線・角丸・影は本編と共通の BoardFrame。ここではマスの中身とコーチマークだけを担当する
+        BoardFrame { p in cell(p) }
+            .coordinateSpace(name: Self.space)
+            .onPreferenceChange(CellFramesKey.self) { frames = $0 }
+            .overlay { spotlight }
+            .overlay { rings }
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { pulse = true }
+                anchorX = anchor
             }
-        }
-        .padding(2)
-        .background(Theme.boardFrame)
-        .overlay {
-            // 点線（先行・後攻の陣の境界）。本編の BoardView と同じ描画
-            GeometryReader { geo in
-                Path { path in
-                    path.move(to: CGPoint(x: 0, y: geo.size.height / 2))
-                    path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height / 2))
-                }
-                .stroke(Theme.boardDivider, style: StrokeStyle(lineWidth: 2, dash: [5, 4]))
-            }
-            .allowsHitTesting(false)
-        }
-        .coordinateSpace(name: Self.space)
-        .onPreferenceChange(CellFramesKey.self) { frames = $0 }
-        .overlay { spotlight }
-        .overlay { rings }
-        .aspectRatio(1, contentMode: .fit)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { pulse = true }
-            anchorX = anchor
-        }
-        .onChange(of: anchor) { _, new in anchorX = new }
+            .onChange(of: anchor) { _, new in anchorX = new }
     }
 
     private func cell(_ p: Position) -> some View {
@@ -107,6 +86,8 @@ struct CoachBoardView: View {
                 context.fill(Path(roundedRect: rect.insetBy(dx: -1, dy: -1), cornerRadius: 4), with: .color(.black))
             }
         }
+        // 盤の角丸に合わせて切る（暗幕が角からはみ出さないように）
+        .clipShape(BoardOutline.shape)
         .allowsHitTesting(false)
     }
 

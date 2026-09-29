@@ -59,7 +59,7 @@ struct TitleView: View {
             modeButton("CPUと対戦（自分が先行）", .vsCPU(human: .first))
             modeButton("CPUと対戦（自分が後攻）", .vsCPU(human: .second))
             Button("遊び方を見る") { showsCoach = true }
-                .controlSize(.large)
+                .chromeButtonStyle()
             Spacer()
         }
         .padding(24)
