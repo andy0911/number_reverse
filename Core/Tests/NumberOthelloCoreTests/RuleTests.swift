@@ -134,27 +134,54 @@ struct SpecialPieceTests {
         #expect(state.board[Position(4, 2)] == piece(.second, .number(5)))
     }
 
-    @Test("B を置いても攻撃しない (R-4)")
-    func bombDoesNotAttack() throws {
+    @Test("B は軍の合計に 0 として加わり、通常の駒と同じ挟み判定で裏返せる (R-4 改訂)")
+    func bombCapturesLikeNumber() throws {
         var state = GameState(board: makeBoard([
             emptyRow, emptyRow, emptyRow, emptyRow,
             ". a9 b1 . . . . .",
             emptyRow, emptyRow, emptyRow,
         ]), current: .first)
         try state.place(.bomb, at: Position(4, 3))
-        #expect(state.board[Position(4, 2)] == piece(.second, .number(1)))
+        // B（0）+ 背後の 9 = 9 が相手の 1 を上回るため裏返る
+        #expect(state.board[Position(4, 2)] == piece(.first, .number(9)))
     }
 
-    @Test("B は灰マスに置けない (R-4)")
-    func bombNotOnGray() {
+    @Test("B は灰マスでも合計が足りれば置ける (R-4 改訂)")
+    func bombOnGrayCapturesWhenSumAllows() throws {
         var state = GameState(board: makeBoard([
             emptyRow, emptyRow, emptyRow, emptyRow,
             ". b1 a9 . . . . .",
             emptyRow, emptyRow, emptyRow,
         ]), current: .first)
+        try state.place(.bomb, at: Position(4, 0))
+        // B（0）+ 背後の 9 = 9 が相手の 1 を上回るため、灰マスでも置ける
+        #expect(state.board[Position(4, 1)] == piece(.first, .number(9)))
+    }
+
+    @Test("B も灰マスで合計が足りなければ置けない (R-2, R-4 改訂)")
+    func bombOnGrayStillRequiresCapture() {
+        var state = GameState(board: makeBoard([
+            emptyRow, emptyRow, emptyRow, emptyRow,
+            ". b9 a1 . . . . .",
+            emptyRow, emptyRow, emptyRow,
+        ]), current: .first)
+        // B（0）+ 背後の 1 = 1 は相手の 9 を上回れない
         #expect(throws: MoveError.grayRequiresCapture) {
             try state.place(.bomb, at: Position(4, 0))
         }
+    }
+
+    @Test("灰マスで B でしか挟めない局面でも legalMoves に含まれ、誤ってパスにならない (R-4 改訂)")
+    func legalMovesIncludesBombOnGray() {
+        // 手駒に数字駒が無く B のみ残っている想定に近づけるため、
+        // 数字駒では挟めない配置（背後が無い）＋ B なら挟める配置を同じ空マスに用意する
+        let state = GameState(board: makeBoard([
+            emptyRow, emptyRow, emptyRow, emptyRow,
+            ". b1 a9 . . . . .",
+            emptyRow, emptyRow, emptyRow,
+        ]), current: .first)
+        let moves = state.legalMoves()
+        #expect(moves.contains(Move(.bomb, at: Position(4, 0))))
     }
 }
 

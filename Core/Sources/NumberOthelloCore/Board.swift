@@ -39,9 +39,9 @@ public struct Board: Hashable, Sendable {
 
     /// 位置 p に置かれた駒を起点に、裏返る相手駒を返す（spec §5.1, §5.2）。
     /// 盤面は変更しない（全方向を同じ盤面で評価する）。
+    /// B（爆弾）は「攻撃できない」特殊駒ではなく、軍の合計に 0 として加わる通常の駒として挟み判定する（R-4 改訂）。
     public func captures(from p: Position) -> Set<Position> {
         guard let placed = self[p].piece else { return [] }
-        if placed.kind == .bomb { return [] }
         let me = placed.owner
         var result: Set<Position> = []
 
