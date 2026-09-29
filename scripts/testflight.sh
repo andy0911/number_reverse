@@ -2,7 +2,7 @@
 # TestFlight 用のビルド。
 #   scripts/testflight.sh export   … 署名付き .ipa を build/export に書き出す（Apple には送らない）
 #   scripts/testflight.sh upload   … App Store Connect にアップロードする（TestFlight に届く）
-# 前提: Xcode にチーム 377M4Z6S57 の Apple ID でサインイン済み、App Store Connect にアプリが作成済み（docs/testflight.md）。
+# 前提: App Store Connect にアプリ作成済み、App Store 用プロファイル「Tokaeshi App Store」をインストール済み（docs/testflight.md）。
 # App Store Connect API キーで認証する場合は ASC_KEY_PATH / ASC_KEY_ID / ASC_ISSUER_ID を環境変数で渡す。
 set -euo pipefail
 
