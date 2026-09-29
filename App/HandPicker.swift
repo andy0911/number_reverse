@@ -43,6 +43,6 @@ struct HandPicker: View {
         // （GameView の VStack の間隔などと合わせて相殺している。詳細は GameView 冒頭のコメント）
         .padding(.vertical, 7)
         // ガラスは背景のコンテナにだけ適用する（各駒ボタンの選択中の塗りが弱まらないように）
-        .chromeGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

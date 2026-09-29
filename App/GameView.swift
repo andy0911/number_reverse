@@ -59,13 +59,13 @@ struct GameView: View {
         case .awaitingBombDirection(let owner, _) where model.isHumanTurn:
             DialogCard(title: "\(owner.displayName)の爆弾が爆発", subtitle: "相手の駒を盤端まですべて裏返す方向を選んでください") {
                 Button("上下左右 ✚") { model.chooseBombDirection(.cross) }
-                    .chromeProminentButtonStyle()
+                    .buttonStyle(.glassProminent)
                 Button("斜め ✕") { model.chooseBombDirection(.diagonal) }
-                    .chromeProminentButtonStyle()
+                    .buttonStyle(.glassProminent)
             }
         case .finished:
             DialogCard(title: resultText, subtitle: "先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻") {
-                Button("タイトルへ", action: exit).chromeProminentButtonStyle()
+                Button("タイトルへ", action: exit).buttonStyle(.glassProminent)
             }
         default:
             EmptyView()

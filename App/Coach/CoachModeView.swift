@@ -90,9 +90,9 @@ struct CoachModeView: View {
 
     // MARK: - 操作ボタン
 
-    /// 主操作（実演・次へ）は `chromeProminentButtonStyle`、副操作（戻る・もう一度）は `chromeButtonStyle`（本編の chrome と同じ）
+    /// 主操作（実演・次へ）は `.glassProminent`、副操作（戻る・もう一度）は `chromeButtonStyle`（本編の chrome と同じ）
     private var controls: some View {
-        ChromeGlassGroup {
+        GlassEffectContainer {
             HStack(spacing: 10) {
                 Button("戻る", systemImage: "chevron.left") { session.back() }
                     .chromeButtonStyle()
@@ -103,7 +103,7 @@ struct CoachModeView: View {
                     } label: {
                         Label(demo.buttonTitle, systemImage: "play.fill").frame(maxWidth: .infinity)
                     }
-                    .chromeProminentButtonStyle()
+                    .buttonStyle(.glassProminent)
                 } else {
                     if session.step.demo != nil {
                         Button("もう一度", systemImage: "arrow.counterclockwise") { session.replay() }
@@ -114,7 +114,7 @@ struct CoachModeView: View {
                     } label: {
                         Text(session.isLastStep ? "完了" : "次へ").frame(maxWidth: .infinity)
                     }
-                    .chromeProminentButtonStyle()
+                    .buttonStyle(.glassProminent)
                 }
             }
         }

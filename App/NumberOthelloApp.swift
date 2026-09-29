@@ -14,8 +14,10 @@ struct NumberOthelloApp: App {
 struct RootView: View {
     @State private var model: GameViewModel? = RootView.debugModel()
 
-    /// 動作確認用の起動引数: `-demo` CPU 同士の対局 / `-bombScenario` 爆弾が裏返る直前の盤面
+    /// 動作確認用の起動引数: `-demo` CPU 同士の対局 / `-bombScenario` 爆弾が裏返る直前の盤面。
+    /// Debug ビルド限定（TestFlight に出す Release ビルドでは常にタイトル画面から始まる）
     private static func debugModel() -> GameViewModel? {
+        #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if args.contains("-demo") { return GameViewModel(mode: .cpuOnly) }
         if args.contains("-bombScenario") {
@@ -29,6 +31,7 @@ struct RootView: View {
             board[Position(3, 4)] = .piece(Piece(.second, .number(5)))
             return GameViewModel(mode: .twoPlayers, state: GameState(board: board, current: .first))
         }
+        #endif
         return nil
     }
 
@@ -49,8 +52,11 @@ struct TitleView: View {
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
-            Text("数字オセロ")
+            Text("トオカエシ")
                 .font(.largeTitle.bold())
+            Text("十返し")
+                .font(.title3)
+                .foregroundStyle(.secondary)
             Text("数字の合計で相手の軍を挟んで裏返せ")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -73,7 +79,7 @@ struct TitleView: View {
         Button { start(mode) } label: {
             Text(title).frame(maxWidth: .infinity)
         }
-        .chromeProminentButtonStyle()
+        .buttonStyle(.glassProminent)
         .controlSize(.large)
     }
 }
