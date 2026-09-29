@@ -57,8 +57,10 @@ final class GameViewModel {
         return !mode.isCPU(p) && !isCPUThinking
     }
 
-    /// 選択中の駒で置けるセル
+    /// 選択中の駒で置けるセル。爆弾の方向選択中は、その爆弾自身の位置を示す
+    /// （盤面を隠さずインライン表示にしたため、どの駒が爆発したのかを見失わないように）
     var highlightedCells: Set<Position> {
+        if case .awaitingBombDirection(_, let position) = state.phase { return [position] }
         guard isHumanTurn, let kind = selectedKind else { return [] }
         return Set(state.legalMoves().filter { $0.kind == kind }.map(\.position))
     }
@@ -70,6 +72,9 @@ final class GameViewModel {
 
     func tap(_ p: Position) {
         guard isHumanTurn else { return }
+        // 方向選択中はインライン表示で盤面を隠さなくなった分、盤面のタップが素通りしてしまう。
+        // setup/playing では駒配置に使うが、方向選択中（駒は選べない）は何もしない
+        if case .awaitingBombDirection = state.phase { return }
         guard let kind = selectedKind else {
             message = "先に下から駒を選んでください"
             return

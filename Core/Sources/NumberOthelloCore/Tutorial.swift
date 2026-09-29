@@ -20,7 +20,7 @@ public enum TutorialTopic: String, CaseIterable, Sendable {
     case behindArmy
     case enemyArmy
     case tank
-    case bombNoAttack
+    case bombCapture
     case bombExplosion
     case wasteland
     case grayCell

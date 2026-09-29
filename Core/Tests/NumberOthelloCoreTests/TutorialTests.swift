@@ -217,15 +217,15 @@ struct TutorialNarrationTests {
         #expect(state.board[at(4, 1)] == .wasteland)
     }
 
-    @Test("B: 置いても何も裏返らないが、数字の 1 なら裏返る。使える枚数は先行 1・後攻 2")
-    func bombNoAttack() throws {
-        let initial = Tutorial.scenario(.bombNoAttack).initial
+    @Test("B: 合計に 0 として加わり、数字駒と同じ挟み判定で裏返せる。使える枚数は先行 1・後攻 2")
+    func bombCapture() throws {
+        let initial = Tutorial.scenario(.bombCapture).initial
         #expect(initial.hand(of: .first).count(of: .bomb) == 1)
         #expect(initial.hand(of: .second).count(of: .bomb) == 2)
 
         var bomb = initial
         try bomb.place(.bomb, at: at(4, 3))
-        #expect(bomb.board[at(4, 2)] == piece(.second, .number(1)))
+        #expect(bomb.board[at(4, 2)] == piece(.first, .number(9)))
         var number = initial
         try number.place(.number(1), at: at(4, 3))
         #expect(number.board[at(4, 2)] == piece(.first, .number(9)))
