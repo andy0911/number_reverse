@@ -57,8 +57,10 @@ final class GameViewModel {
         return !mode.isCPU(p) && !isCPUThinking
     }
 
-    /// 選択中の駒で置けるセル
+    /// 選択中の駒で置けるセル。爆弾の方向選択中は、その爆弾自身の位置を示す
+    /// （盤面を隠さずインライン表示にしたため、どの駒が爆発したのかを見失わないように）
     var highlightedCells: Set<Position> {
+        if case .awaitingBombDirection(_, let position) = state.phase { return [position] }
         guard isHumanTurn, let kind = selectedKind else { return [] }
         return Set(state.legalMoves().filter { $0.kind == kind }.map(\.position))
     }

@@ -22,7 +22,11 @@ struct GameView: View {
             if let message = model.message {
                 Text(message).font(.footnote).foregroundStyle(.red)
             }
-            HandPicker(model: model)
+            if case .awaitingBombDirection(let owner, _) = model.state.phase {
+                BombDirectionPicker(model: model, owner: owner)
+            } else {
+                HandPicker(model: model)
+            }
             PlayerBar(model: model, player: .first)
             Spacer(minLength: 0)
         }
@@ -58,13 +62,6 @@ struct GameView: View {
 
     @ViewBuilder private var overlay: some View {
         switch model.state.phase {
-        case .awaitingBombDirection(let owner, _) where model.isHumanTurn:
-            DialogCard(title: "\(owner.displayName)の爆弾が爆発", subtitle: "各方向の最初の駒が相手の駒なら 1 枚裏返します（自分の駒なら不発・最大4枚）。方向を選んでください") {
-                Button("上下左右 ✚") { model.chooseBombDirection(.cross) }
-                    .buttonStyle(.glassProminent)
-                Button("斜め ✕") { model.chooseBombDirection(.diagonal) }
-                    .buttonStyle(.glassProminent)
-            }
         case .finished:
             DialogCard(title: resultText, subtitle: "先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻") {
                 Button("タイトルへ", action: exitAfterResult).buttonStyle(.glassProminent)
