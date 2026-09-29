@@ -9,13 +9,29 @@ options:
 packages:
   NumberOthelloCore:
     path: Core
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    exactVersion: 13.10.0
+  GoogleUserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git
+    exactVersion: 3.1.0
 targets:
   NumberOthello:
     type: application
     platform: iOS
     sources: [App]
+    scheme:
+      testTargets:
+        - NumberOthelloTests
+      # StoreKit テスト構成（App Store Connect と通信せずシミュレータで購入・復元を試せる）。
+      # 実機の実 App Store には影響しない
+      storeKitConfiguration: App/Monetization/StoreKitTest.storekit
     dependencies:
       - package: NumberOthelloCore
+      - package: GoogleMobileAds
+        product: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
+        product: GoogleUserMessagingPlatform
     settings:
       base:
         PRODUCT_NAME: Tokaeshi
@@ -24,8 +40,11 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: トオカエシ
-        # 標準の暗号化以外を使っていない（通信なし）ため、アップロードごとの輸出コンプライアンス確認を省く
+        # 広告 SDK（AdMob）と StoreKit の通信を使うため、輸出コンプライアンスの標準暗号化区分に該当する。
+        # 標準の暗号化（HTTPS 等）以外は使っていないため、アップロードごとの確認ダイアログは出るが ITSAppUsesNonExemptEncryption は NO のままでよい
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # ATT（App Tracking Transparency）の許可ダイアログに表示する説明文（spec §11.3）
+        INFOPLIST_KEY_NSUserTrackingUsageDescription: パーソナライズされた広告を表示するために使用します
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -35,3 +54,26 @@ targets:
         # scripts/testflight.sh が git のコミット数から渡す（ここの値はローカルビルド用）
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
+    # GENERATE_INFOPLIST_FILE と共存する追加の Info.plist（GADApplicationIdentifier・SKAdNetworkItems は
+    # INFOPLIST_KEY_ 形式で表現できないため、Xcode のモダンな Info.plist 生成にこのファイルをマージする）
+    info:
+      path: App/Info.plist
+      properties:
+        GADApplicationIdentifier: ca-app-pub-3940256099942544~1458002511
+        # TODO（実装者）: Google 公式ページの最新の一覧を全件そのまま貼り付けること（要約経由の転記は文字化けの恐れがあるため未転記）
+        # https://developers.google.com/admob/ios/quick-start の SKAdNetworkItems 節
+        SKAdNetworkItems:
+          - SKAdNetworkIdentifier: cstr6suwn9.skadnetwork
+  NumberOthelloTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [AppTests]
+    dependencies:
+      - target: NumberOthello
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        # PRODUCT_NAME を Tokaeshi に変えているため、ターゲット名から自動算出される既定の TEST_HOST では見つからない
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Tokaeshi.app/Tokaeshi"
+        BUNDLE_LOADER: "$(TEST_HOST)"

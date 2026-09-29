@@ -14,6 +14,15 @@ enum GameMode: Hashable {
         case .cpuOnly: true
         }
     }
+
+    /// 広告のカウント対象かどうかの分類（spec §11.1）。動作確認用の `cpuOnly` は対象外
+    var monetizationCategory: GameModeCategory {
+        switch self {
+        case .twoPlayers: .twoPlayers
+        case .vsCPU: .vsCPU
+        case .cpuOnly: .cpuOnly
+        }
+    }
 }
 
 @MainActor
