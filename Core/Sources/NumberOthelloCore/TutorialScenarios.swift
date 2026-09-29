@@ -6,7 +6,7 @@
 //   文章そのものは自動では検証されず、claim への書き漏らしも検出されない（「a + b = c」の算術だけはテストが確認する）。
 //   文章を直したら claim を、claim を直したら文章を、必ず見直す。
 // - 一般化に注意する。数字駒にだけ当てはまる規則（表裏を足すと 10、合計の比較）を「駒」全般と書かない
-//   （T・B は裏が ×、T は数を無視、B は攻撃しない）。初期配置と本戦でも規則が違う（置ける場所、点線の意味）。
+//   （T・B は裏が ×、T は挟み判定で数を無視、B は挟み判定の合計に 0 として加わる）。初期配置と本戦でも規則が違う（置ける場所、点線の意味）。
 // - 座標は (row, col)。row 0 が上（後攻側）、row 7 が下（先行側）。説明文には座標を書かない。
 // - 各操作の実行者は、実行時の手番（爆発方向の選択は爆弾の持ち主）に合わせて書く。合わないと run() が失敗として報告する。
 //   配置が拒否されると手番は変わらず、相手に置ける場所が無いとパスになり同じプレイヤーが続けて置く（spec §4.3, §5.4）。
@@ -14,7 +14,7 @@
 /// 説明の順に並べたシナリオ一覧
 public enum Tutorial {
     public static let scenarios: [TutorialScenario] = [
-        zones, flip, tie, behindArmy, enemyArmy, tank, bombNoAttack, bombExplosion, wasteland, grayCell, passAndEnd,
+        zones, flip, tie, behindArmy, enemyArmy, tank, bombCapture, bombExplosion, wasteland, grayCell, passAndEnd,
     ]
 
     // MARK: - 記述用の短縮
@@ -329,11 +329,11 @@ public enum Tutorial {
                     ])),
         ])
 
-    // MARK: - 7. B（爆弾）は攻撃できない（spec §3.2, R-4）
+    // MARK: - 7. B（爆弾）も通常の駒として挟める（spec §3.2, R-4）
 
-    static let bombNoAttack = TutorialScenario(
-        id: .bombNoAttack,
-        title: "B（爆弾）は攻撃できない",
+    static let bombCapture = TutorialScenario(
+        id: .bombCapture,
+        title: "B（爆弾）も挟んで裏返せる",
         initial: GameState(
             board: Board(diagram: [
                 emptyRow, emptyRow, emptyRow, emptyRow,
@@ -350,18 +350,17 @@ public enum Tutorial {
                     .cell(P(4, 1), a(9)), .cell(P(4, 2), b(1)), .current(.first),
                 ]),
             step(
-                "B を置いても攻撃しない",
-                "後攻の 1 の右側は、先行の 9 と挟める位置です。数字の 1 を置けば 1 + 9 = 10 で裏返せますが、B を置くとどうなるでしょう。",
+                "B は軍の合計に 0 として加わる",
+                "後攻の 1 の右側は、先行の 9 と挟める位置です。B 自身は合計に 0 として数えられますが、背後の 9 と合わせれば挟めます。",
                 focus: .cells([P(4, 1), P(4, 2), P(4, 3)]),
                 demo: demo(
                     "先行が B を置く",
                     [.place(.first, .bomb, at: P(4, 3))],
-                    result: "何も裏返りません。B は置いても攻撃できません。B の出番は、相手に裏返されたときです。",
-                    focus: .cells([P(4, 2)]),
+                    result: "B は 0、その背後の 9 を合わせた自軍の合計 9 が、相手の 1 を上回りました。B も通常の駒と同じ挟み判定で裏返せます。",
+                    focus: .flipped,
                     after: [
-                        .flipped([]), .cell(P(4, 3), .piece(Piece(.first, .bomb))), .cell(P(4, 2), b(1)),
-                        .whatIf(.place(.first, .number(1), at: P(4, 3)), flipped: [P(4, 2)]),
-                        .whatIfSums(.place(.first, .number(1), at: P(4, 3)), direction: dir(0, -1), behind: 1, far: 9, enemy: 1),
+                        .sandwich(from: P(4, 3), direction: dir(0, -1), behind: 0, far: 9, enemy: 1),
+                        .flipped([P(4, 2)]), .cell(P(4, 3), .piece(Piece(.first, .bomb))), .cell(P(4, 2), a(9)),
                     ])),
         ])
 
@@ -497,15 +496,18 @@ public enum Tutorial {
                         .rejected(.grayRequiresCapture), .cell(P(4, 0), .empty),
                     ])),
             step(
-                "B は灰マスに置けない",
-                "B（爆弾）は攻撃に使えないので、何も裏返せません。灰マスへ B を置こうとすると…",
+                "B も合計が足りなければ置けない",
+                "B（爆弾）も同じ判定です。B 自身は合計に 0 として加わるので、灰マスへ B を置こうとすると…",
                 focus: .cells([P(4, 0)]),
                 demo: demo(
                     "B を置いてみる",
                     [.place(.first, .bomb, at: P(4, 0))],
-                    result: "置けませんでした。B は灰マスには置けません。",
-                    focus: .cells([P(4, 0)]),
-                    after: [.rejected(.grayRequiresCapture), .cell(P(4, 0), .empty)])),
+                    result: "置けませんでした。自軍の合計 0 + 1 = 1 は相手の 9 を上回れず、1 枚も裏返せないからです。",
+                    focus: .cells([P(4, 0), P(4, 1), P(4, 2)]),
+                    after: [
+                        .sandwich(from: P(4, 0), direction: dir(0, 1), behind: 0, far: 1, enemy: 9),
+                        .rejected(.grayRequiresCapture), .cell(P(4, 0), .empty),
+                    ])),
             step(
                 "裏返せるなら置ける",
                 "では 9 を置くと？ 自軍の合計は 9 + 1 = 10 になります。",
