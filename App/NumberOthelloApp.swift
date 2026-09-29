@@ -44,6 +44,7 @@ struct RootView: View {
 
 struct TitleView: View {
     let start: (GameMode) -> Void
+    @State private var showsCoach = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -57,9 +58,15 @@ struct TitleView: View {
             modeButton("2人で対戦", .twoPlayers)
             modeButton("CPUと対戦（自分が先行）", .vsCPU(human: .first))
             modeButton("CPUと対戦（自分が後攻）", .vsCPU(human: .second))
+            Button("遊び方を見る") { showsCoach = true }
+                .chromeButtonStyle()
             Spacer()
         }
         .padding(24)
+        // コーチモード（遊び方）。本編のゲーム状態とは独立
+        .fullScreenCover(isPresented: $showsCoach) {
+            CoachModeView { showsCoach = false }
+        }
     }
 
     private func modeButton(_ title: String, _ mode: GameMode) -> some View {
