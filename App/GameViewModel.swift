@@ -72,6 +72,9 @@ final class GameViewModel {
 
     func tap(_ p: Position) {
         guard isHumanTurn else { return }
+        // 方向選択中はインライン表示で盤面を隠さなくなった分、盤面のタップが素通りしてしまう。
+        // setup/playing では駒配置に使うが、方向選択中（駒は選べない）は何もしない
+        if case .awaitingBombDirection = state.phase { return }
         guard let kind = selectedKind else {
             message = "先に下から駒を選んでください"
             return

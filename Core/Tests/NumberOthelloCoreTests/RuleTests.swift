@@ -170,6 +170,19 @@ struct SpecialPieceTests {
             try state.place(.bomb, at: Position(4, 0))
         }
     }
+
+    @Test("灰マスで B でしか挟めない局面でも legalMoves に含まれ、誤ってパスにならない (R-4 改訂)")
+    func legalMovesIncludesBombOnGray() {
+        // 手駒に数字駒が無く B のみ残っている想定に近づけるため、
+        // 数字駒では挟めない配置（背後が無い）＋ B なら挟める配置を同じ空マスに用意する
+        let state = GameState(board: makeBoard([
+            emptyRow, emptyRow, emptyRow, emptyRow,
+            ". b1 a9 . . . . .",
+            emptyRow, emptyRow, emptyRow,
+        ]), current: .first)
+        let moves = state.legalMoves()
+        #expect(moves.contains(Move(.bomb, at: Position(4, 0))))
+    }
 }
 
 @Suite("爆弾 spec §5.4")

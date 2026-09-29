@@ -137,7 +137,8 @@ public struct GameState: Hashable, Sendable {
             let isGray = Board.zone(of: p) == .gray
             for kind in kinds {
                 if isGray {
-                    if kind == .bomb { continue }
+                    // B も通常駒と同じ挟み判定を受けるため、灰マスの可否も合計次第（R-4 改訂）。
+                    // 特別扱いで除外すると、B でしか挟めない局面で合法手が 0 になり誤ってパス・終了してしまう
                     var trial = board
                     trial[p] = .piece(Piece(player, kind))
                     if trial.captures(from: p).isEmpty { continue }
