@@ -1,0 +1,34 @@
+{
+  "identifier": "8F5C1B2E-0000-4000-8000-000000000001",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "370",
+      "familyShareable": false,
+      "internalID": "8F5C1B2E-0000-4000-8000-000000000002",
+      "localizations": [
+        {
+          "description": "対局結果後に表示される広告を非表示にします",
+          "displayName": "広告を削除",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "jp.andygrave.tokaeshi.removeads",
+      "referenceName": "Remove Ads",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "6817160128",
+    "_developerTeamID": "377M4Z6S57",
+    "_failTransactionsEnabled": false,
+    "_locale": "ja_JP",
+    "_storefront": "JPN",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

@@ -1,9 +1,11 @@
 import SwiftUI
+import UIKit
 import NumberOthelloCore
 
 struct GameView: View {
     let model: GameViewModel
     let exit: () -> Void
+    @Environment(Monetization.self) private var monetization
 
     var body: some View {
         // 不変条件: SE（375×667pt）で盤の高さを、ガラス chrome 導入前（328pt）から削らない（実測 327.5pt）。
@@ -65,7 +67,7 @@ struct GameView: View {
             }
         case .finished:
             DialogCard(title: resultText, subtitle: "先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻") {
-                Button("タイトルへ", action: exit).buttonStyle(.glassProminent)
+                Button("タイトルへ", action: exitAfterResult).buttonStyle(.glassProminent)
             }
         default:
             EmptyView()
@@ -78,5 +80,16 @@ struct GameView: View {
         case .draw: "引き分け"
         case nil: ""
         }
+    }
+
+    /// 対局終了ダイアログの「タイトルへ」。ここだけが広告のカウント対象（spec §11.1）
+    private func exitAfterResult() {
+        monetization.ads.handleReturnToTitle(
+            mode: model.mode.monetizationCategory,
+            isMidGameExit: false,
+            didReachFinished: true,
+            from: UIViewController.topMost()
+        )
+        exit()
     }
 }
