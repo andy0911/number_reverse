@@ -108,16 +108,13 @@ struct CoachBoardView: View {
                 }
             }
             if focus == .divider, let y = dividerY, let left = frames[Position(0, 0)], let right = frames[Position(0, Board.size - 1)] {
-                Path { path in
+                // 黒縁の上に白線を重ねる（セルのリングと同じ二重線）
+                let line = Path { path in
                     path.move(to: CGPoint(x: left.minX, y: y))
                     path.addLine(to: CGPoint(x: right.maxX, y: y))
                 }
-                .stroke(.black, style: StrokeStyle(lineWidth: 6, dash: [8, 5]))
-                Path { path in
-                    path.move(to: CGPoint(x: left.minX, y: y))
-                    path.addLine(to: CGPoint(x: right.maxX, y: y))
-                }
-                .stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [8, 5]))
+                line.stroke(.black, style: StrokeStyle(lineWidth: 6, dash: [8, 5]))
+                line.stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [8, 5]))
             }
         }
         .opacity(pulse ? 1 : 0.55)
