@@ -2,7 +2,7 @@ import Foundation
 
 /// 広告・課金の識別子。spec §11
 enum MonetizationConfig {
-    /// 「広告を削除」（非消耗型・買い切り）。App Store Connect 側での商品登録が必要（未登録。実装者 TODO）
+    /// 「広告を削除」（非消耗型・買い切り）。App Store Connect に登録済み（Apple ID 6817246790、¥300）
     static let removeAdsProductID = "jp.andygrave.tokaeshi.removeads"
 
     /// インタースティシャル広告のユニット ID。
