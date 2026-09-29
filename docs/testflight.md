@@ -12,7 +12,7 @@
 | チーム | `377M4Z6S57`（Individual） | `project.yml` `DEVELOPMENT_TEAM`、`scripts/ExportOptions.plist` |
 | 対象 OS | iOS 26.5 以上、iPhone のみ、縦向きのみ | `project.yml` |
 | バージョン | 1.0（`MARKETING_VERSION`） | `project.yml` |
-| ビルド番号 | アーカイブ時に git のコミット数を渡す。同じ番号が既に使われていれば、アップロード時に Xcode が繰り上げる | `scripts/testflight.sh`、`scripts/ExportOptions.plist` |
+| ビルド番号 | アーカイブ時に git のコミット数を渡す。アップロードは main から行う（PR ブランチは squash マージで main より数が多くなるため）。番号が使えない場合はアップロード時に Xcode が繰り上げる | `scripts/testflight.sh`、`scripts/ExportOptions.plist` |
 | 輸出コンプライアンス | `ITSAppUsesNonExemptEncryption = NO`（通信・独自暗号なし） | `project.yml` |
 | アイコン | 1024×1024（アルファなし）1 枚 | `App/Assets.xcassets/AppIcon.appiconset`（生成元 `scripts/make_icon.swift`） |
 | デバッグ用起動引数 | `-demo` / `-bombScenario` は Debug ビルドのみ有効 | `App/NumberOthelloApp.swift` |
