@@ -38,4 +38,5 @@ xcodebuild -exportArchive \
   -archivePath "$archive" -exportPath "$build_dir/export" -exportOptionsPlist "$export_options" \
   -allowProvisioningUpdates "${auth[@]}"
 
-echo "done: mode=$mode build=$build_number"
+# ExportOptions の manageAppVersionAndBuildNumber により、upload 時に Xcode が番号を繰り上げる場合がある
+echo "done: mode=$mode archive_build=$build_number（配布されるビルド番号は App Store Connect で確認）"

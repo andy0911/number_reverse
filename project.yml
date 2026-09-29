@@ -1,5 +1,5 @@
 # プロジェクト・スキーム・モジュール名の NumberOthello は開発用の内部名（利用者には表示しない）。
-# 表示名・製品名は「トオカエシ（十返し）」。README 冒頭を参照。
+# 表示名は「トオカエシ」、製品名（.app・実行ファイル名）は Tokaeshi。名前の由来と商標の扱いは README 冒頭を参照。
 name: NumberOthello
 options:
   bundleIdPrefix: jp.andygrave
@@ -23,6 +23,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: トオカエシ
+        # App Store 上のカテゴリはこのキーでは決まらず、App Store Connect で設定する（docs/testflight.md）
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.board-games
         # 標準の暗号化以外を使っていない（通信なし）ため、アップロードごとの輸出コンプライアンス確認を省く
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO

@@ -12,9 +12,8 @@
 | チーム | `377M4Z6S57`（Individual） | `project.yml` `DEVELOPMENT_TEAM`、`scripts/ExportOptions.plist` |
 | 対象 OS | iOS 26.5 以上、iPhone のみ、縦向きのみ | `project.yml` |
 | バージョン | 1.0（`MARKETING_VERSION`） | `project.yml` |
-| ビルド番号 | アップロードごとに git のコミット数を渡す | `scripts/testflight.sh` |
+| ビルド番号 | アーカイブ時に git のコミット数を渡す。同じ番号が既に使われていれば、アップロード時に Xcode が繰り上げる | `scripts/testflight.sh`、`scripts/ExportOptions.plist` |
 | 輸出コンプライアンス | `ITSAppUsesNonExemptEncryption = NO`（通信・独自暗号なし） | `project.yml` |
-| カテゴリ | ボードゲーム | `project.yml` |
 | アイコン | 1024×1024（アルファなし）1 枚 | `App/Assets.xcassets/AppIcon.appiconset`（生成元 `scripts/make_icon.swift`） |
 | デバッグ用起動引数 | `-demo` / `-bombScenario` は Debug ビルドのみ有効 | `App/NumberOthelloApp.swift` |
 
@@ -22,13 +21,14 @@ Bundle ID は App Store Connect にアプリを作成すると変更できない
 
 ## 本人が行う作業
 
-1. **Xcode のアカウント確認**: Xcode › Settings › Accounts に、チーム `377M4Z6S57` の Apple ID でサインインしていること。
+1. **Xcode のアカウント確認**: Xcode › Settings › Accounts に、チーム `377M4Z6S57` の Apple ID でサインインしていること。未サインインだと書き出しが `No Accounts` / `No profiles for 'jp.andygrave.tokaeshi'` で失敗する（アーカイブまでは成功する）。
 2. **App Store Connect でアプリを作成**（[新規 App の追加](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app)。Account Holder / App Manager / Admin の権限が必要）
    - プラットフォーム: iOS
    - 名前: トオカエシ（App Store 上で他のアプリと重複すると登録できない）
    - プライマリ言語: 日本語
    - Bundle ID: `jp.andygrave.tokaeshi`（一覧に無ければ、先に `scripts/testflight.sh export` を 1 回実行すると Xcode が App ID を登録する）
    - SKU: 任意（例 `tokaeshi`）
+   - 作成後、App 情報でカテゴリを「ゲーム」（サブカテゴリ「ボード」）に設定する（[App 情報](https://developer.apple.com/help/app-store-connect/reference/app-information/app-information)）
 3. **ビルドのアップロード**
    ```bash
    scripts/testflight.sh export   # 署名付き .ipa を build/export に書き出すだけ（送信しない）
