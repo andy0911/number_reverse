@@ -160,7 +160,7 @@ struct SpecialPieceTests {
 
 @Suite("爆弾 spec §5.4")
 struct BombTests {
-    @Test("B が裏返されると ×、持ち主が方向を選び相手駒だけ盤端まで裏返る (R-5, R-7)")
+    @Test("B が裏返されると ×、持ち主が方向を選び各方向で最初に見つかった相手駒だけ裏返る (R-5, R-7)")
     func explosionCross() throws {
         var state = GameState(board: makeBoard([
             ". . a2 . . . . .",
@@ -178,15 +178,17 @@ struct BombTests {
         #expect(state.current == .first)
 
         try state.chooseBombDirection(.cross)
+        // 左: 隣の a9 が最初の駒（相手駒）→ 裏返る
         #expect(state.board[Position(4, 1)] == piece(.second, .number(1)))
+        // 右: 空セルを飛ばした先ではなく、まず自分（今置いた a1）が最初の駒 → それだけ裏返り、その先の a4/a6 は対象外
         #expect(state.board[Position(4, 3)] == piece(.second, .number(9)))
-        // 空マスを飛ばして盤端まで
-        #expect(state.board[Position(4, 5)] == piece(.second, .number(6)))
-        #expect(state.board[Position(4, 7)] == piece(.second, .number(4)))
-        #expect(state.board[Position(0, 2)] == piece(.second, .number(8)))
-        #expect(state.board[Position(7, 2)] == piece(.second, .number(3)))
-        // 持ち主自身の駒は裏返らない
+        #expect(state.board[Position(4, 5)] == piece(.first, .number(4)))
+        #expect(state.board[Position(4, 7)] == piece(.first, .number(6)))
+        // 上: 最初の駒が持ち主自身の b3 → その方向は不発（先にある a2 まで届かない）
         #expect(state.board[Position(2, 2)] == piece(.second, .number(3)))
+        #expect(state.board[Position(0, 2)] == piece(.first, .number(2)))
+        // 下: 空マスを飛ばした先の a7 が最初の駒（相手駒）→ 裏返る
+        #expect(state.board[Position(7, 2)] == piece(.second, .number(3)))
         #expect(state.phase == .playing)
         #expect(state.current == .second)
     }
@@ -209,23 +211,42 @@ struct BombTests {
         #expect(state.board[Position(4, 3)] == piece(.first, .number(1)))
     }
 
-    @Test("爆発で裏返った相手の B も連鎖爆発し、T は × になる (R-6)")
+    @Test("爆発の対象が相手の B だった場合も連鎖爆発する (R-6)")
     func chainReaction() throws {
         var state = GameState(board: makeBoard([
-            emptyRow, emptyRow, emptyRow, emptyRow,
-            ". a9 bB . . aB . aT",
+            emptyRow, emptyRow,
+            ". . aB . . . . .",
             emptyRow,
-            ". . . . . b2 . .",
-            emptyRow,
+            ". a9 bB . . . . .",
+            emptyRow, emptyRow, emptyRow,
         ]), current: .first)
         try state.place(.number(1), at: Position(4, 3))
         try state.chooseBombDirection(.cross)
-        #expect(state.board[Position(4, 7)] == .wasteland)
-        #expect(state.board[Position(4, 5)] == .wasteland)
-        #expect(state.phase == .awaitingBombDirection(owner: .first, at: Position(4, 5)))
+        // 上方向で最初に見つかった駒が相手（先行）の B → 裏返って × になり、連鎖で先行が次の方向を選ぶ
+        #expect(state.board[Position(2, 2)] == .wasteland)
+        #expect(state.phase == .awaitingBombDirection(owner: .first, at: Position(2, 2)))
 
         try state.chooseBombDirection(.cross)
-        #expect(state.board[Position(6, 5)] == piece(.first, .number(8)))
+        #expect(state.phase == .playing)
+    }
+
+    @Test("連鎖爆発でも各方向 1 個まで、T は × になる")
+    func chainReactionFlipsOne() throws {
+        var state = GameState(board: makeBoard([
+            ". . b6 . . . . .",
+            emptyRow,
+            ". . aB . . . . .",
+            emptyRow,
+            ". a9 bB . . . . .",
+            emptyRow, emptyRow, emptyRow,
+        ]), current: .first)
+        try state.place(.number(1), at: Position(4, 3))
+        try state.chooseBombDirection(.cross)
+        #expect(state.phase == .awaitingBombDirection(owner: .first, at: Position(2, 2)))
+
+        try state.chooseBombDirection(.cross)
+        // 連鎖した B（先行の持ち物）から見て上方向で最初の駒 b6 が裏返る
+        #expect(state.board[Position(0, 2)] == piece(.first, .number(4)))
         #expect(state.phase == .playing)
     }
 

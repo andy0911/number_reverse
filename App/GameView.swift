@@ -57,7 +57,7 @@ struct GameView: View {
     @ViewBuilder private var overlay: some View {
         switch model.state.phase {
         case .awaitingBombDirection(let owner, _) where model.isHumanTurn:
-            DialogCard(title: "\(owner.displayName)の爆弾が爆発", subtitle: "相手の駒を盤端まですべて裏返す方向を選んでください") {
+            DialogCard(title: "\(owner.displayName)の爆弾が爆発", subtitle: "各方向、最初に見つかった相手の駒（最大4枚）を裏返す方向を選んでください") {
                 Button("上下左右 ✚") { model.chooseBombDirection(.cross) }
                     .buttonStyle(.glassProminent)
                 Button("斜め ✕") { model.chooseBombDirection(.diagonal) }
