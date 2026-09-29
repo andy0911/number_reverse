@@ -56,6 +56,7 @@ final class StoreManager {
 
     func purchaseRemoveAds() async {
         guard let product = removeAdsProduct else { return }
+        errorMessage = nil
         isLoading = true
         defer { isLoading = false }
         do {
@@ -77,6 +78,7 @@ final class StoreManager {
 
     /// 審査要件: 非消耗型課金には復元手段が必須
     func restore() async {
+        errorMessage = nil
         isLoading = true
         defer { isLoading = false }
         do {

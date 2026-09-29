@@ -1,6 +1,6 @@
 import Foundation
 
-/// 広告・課金の合成ルート。`RootView` から 1 つだけ生成し、環境として配る
+/// 広告・課金の合成ルート。`NumberOthelloApp` で 1 つだけ生成し、環境として配る
 @MainActor
 @Observable
 final class Monetization {

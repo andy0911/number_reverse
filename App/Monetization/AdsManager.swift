@@ -47,14 +47,23 @@ final class AdsManager: NSObject {
         guard ConsentInformation.shared.canRequestAds else { return }
         canRequestAds = true
 
-        // ATT は UMP の後、画面がアクティブな状態で要求する（早すぎるとダイアログが出ない）
+        // ATT は UMP の後、画面がアクティブな状態で要求する（非アクティブ中に要求するとダイアログが出ずに終わる）
         if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
+            await waitUntilActive()
             _ = await ATTrackingManager.requestTrackingAuthorization()
         }
 
         MobileAds.shared.requestConfiguration.maxAdContentRating = .general
         await MobileAds.shared.start()
         await loadInterstitial()
+    }
+
+    /// アプリがアクティブになるまで待つ（起動直後や UMP フォームを閉じた直後は非アクティブのことがある）
+    private func waitUntilActive() async {
+        guard UIApplication.shared.applicationState != .active else { return }
+        for await _ in NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification) {
+            return
+        }
     }
 
     private func loadInterstitial() async {

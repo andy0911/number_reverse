@@ -40,8 +40,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: トオカエシ
-        # 広告 SDK（AdMob）と StoreKit の通信を使うため、輸出コンプライアンスの標準暗号化区分に該当する。
-        # 標準の暗号化（HTTPS 等）以外は使っていないため、アップロードごとの確認ダイアログは出るが ITSAppUsesNonExemptEncryption は NO のままでよい
+        # 広告 SDK（AdMob）・StoreKit の通信は OS 標準の暗号化（HTTPS）のみで、独自の暗号化は使っていない。
+        # そのため NO を宣言し、アップロードごとの輸出コンプライアンス確認を省く
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # ATT（App Tracking Transparency）の許可ダイアログに表示する説明文（spec §11.3）
         INFOPLIST_KEY_NSUserTrackingUsageDescription: パーソナライズされた広告を表示するために使用します

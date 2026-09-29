@@ -121,6 +121,10 @@ struct TitleView: View {
                 }
                 .font(.footnote)
                 .disabled(monetization.store.isLoading)
+
+                if let error = monetization.store.errorMessage {
+                    Text(error).font(.footnote).foregroundStyle(.red)
+                }
             }
         }
     }
