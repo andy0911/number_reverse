@@ -1,31 +1,42 @@
+import Foundation
 import Testing
 @testable import Tokaeshi
 
 @Suite("広告表示ポリシー spec §11.1")
 struct AdPolicyTests {
-    let policy = AdPolicy(everyNGames: 3)
+    let policy = AdPolicy.default
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-    @Test("N 局に 1 回だけ表示する", arguments: [(1, false), (2, false), (3, true), (4, false), (5, false), (6, true)])
-    func frequency(count: Int, expected: Bool) {
-        #expect(policy.shouldShowAd(finishedGameCount: count, hasRemovedAds: false, adLoaded: true) == expected)
+    @Test("前回表示から180秒以上で表示する", arguments: [-1.0, 0, 179, 179.999, 180, 181, 360])
+    func interval(elapsed: TimeInterval) {
+        #expect(policy.shouldShowAd(finishedGameCount: 2, hasRemovedAds: false, adLoaded: true,
+                                   lastShownAt: now.addingTimeInterval(-elapsed), now: now) == (elapsed >= 180))
     }
 
-    @Test("購入済みなら回数に関係なく表示しない")
-    func purchased() {
-        for n in 1...12 {
-            #expect(policy.shouldShowAd(finishedGameCount: n, hasRemovedAds: true, adLoaded: true) == false)
+    @Test("未表示なら2局目以降は局数によらず表示候補", arguments: [2, 3, 4, 5, 6, 12])
+    func neverShown(count: Int) {
+        #expect(policy.shouldShowAd(finishedGameCount: count, hasRemovedAds: false, adLoaded: true,
+                                   lastShownAt: nil, now: now))
+    }
+
+    @Test("初回と不正な対局数では常に表示しない", arguments: [-1, 0, 1])
+    func firstGame(count: Int) {
+        for lastShownAt: Date? in [nil, now.addingTimeInterval(-360)] {
+            #expect(!policy.shouldShowAd(finishedGameCount: count, hasRemovedAds: false, adLoaded: true,
+                                        lastShownAt: lastShownAt, now: now))
         }
     }
 
-    @Test("広告が読み込めていなければ表示しない")
-    func notLoaded() {
-        #expect(policy.shouldShowAd(finishedGameCount: 3, hasRemovedAds: false, adLoaded: false) == false)
+    @Test("購入済みまたは未ロードなら時間が経過していても表示しない")
+    func unavailable() {
+        for lastShownAt: Date? in [nil, now.addingTimeInterval(-360)] {
+            #expect(!policy.shouldShowAd(finishedGameCount: 3, hasRemovedAds: true, adLoaded: true,
+                                        lastShownAt: lastShownAt, now: now))
+            #expect(!policy.shouldShowAd(finishedGameCount: 3, hasRemovedAds: false, adLoaded: false,
+                                        lastShownAt: lastShownAt, now: now))
+        }
     }
 
-    @Test("対局 0 回では表示しない")
-    func zeroGames() {
-        #expect(policy.shouldShowAd(finishedGameCount: 0, hasRemovedAds: false, adLoaded: true) == false)
-    }
 }
 
 @Suite("広告カウント対象の判定 spec §11.1")

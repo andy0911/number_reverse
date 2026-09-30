@@ -14,4 +14,11 @@ enum MonetizationConfig {
     #else
     static let interstitialAdUnitID = "ca-app-pub-5364369331405756/1465124825"
     #endif
+
+    /// 対局画面のバナー広告。Debug では Google 公式テスト ID を使う。
+    #if DEBUG
+    static let bannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
+    #else
+    static let bannerAdUnitID = "ca-app-pub-5364369331405756/8224074481"
+    #endif
 }
