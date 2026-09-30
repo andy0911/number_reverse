@@ -19,6 +19,14 @@ final class AdsManager: NSObject {
         set { UserDefaults.standard.set(newValue, forKey: "monetization.finishedGameCount") }
     }
 
+    /// 実際に表示を開始した時刻のみ保存する。表示失敗では更新しない。
+    private var lastInterstitialShownAt: Date? {
+        get { UserDefaults.standard.object(forKey: "monetization.lastInterstitialShownAt") as? Date }
+        set { UserDefaults.standard.set(newValue, forKey: "monetization.lastInterstitialShownAt") }
+    }
+
+    private var isPresentingInterstitial = false
+
     init(store: StoreManager) {
         self.store = store
         super.init()
@@ -45,7 +53,6 @@ final class AdsManager: NSObject {
         }
 
         guard ConsentInformation.shared.canRequestAds else { return }
-        canRequestAds = true
 
         // ATT は UMP の後、画面がアクティブな状態で要求する（非アクティブ中に要求するとダイアログが出ずに終わる）
         if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
@@ -55,6 +62,7 @@ final class AdsManager: NSObject {
 
         MobileAds.shared.requestConfiguration.maxAdContentRating = .general
         await MobileAds.shared.start()
+        canRequestAds = true
         await loadInterstitial()
     }
 
@@ -67,7 +75,7 @@ final class AdsManager: NSObject {
     }
 
     private func loadInterstitial() async {
-        guard canRequestAds else { return }
+        guard canRequestAds, !store.hasRemovedAds else { return }
         interstitial = try? await InterstitialAd.load(with: MonetizationConfig.interstitialAdUnitID, request: Request())
         interstitial?.fullScreenContentDelegate = self
     }
@@ -75,18 +83,26 @@ final class AdsManager: NSObject {
     /// 対局終了ダイアログの「タイトルへ」で呼ぶ（spec §11.1）。広告を出したら次回に備えて再読み込みする
     func handleReturnToTitle(mode: GameModeCategory, isMidGameExit: Bool, didReachFinished: Bool, from viewController: UIViewController?) {
         let trigger = AdTrigger(mode: mode, isMidGameExit: isMidGameExit, didReachFinished: didReachFinished)
-        guard trigger.isCountable else { return }
+        guard trigger.isCountable, !isPresentingInterstitial else { return }
         finishedGameCount += 1
 
-        guard policy.shouldShowAd(finishedGameCount: finishedGameCount, hasRemovedAds: store.hasRemovedAds, adLoaded: interstitial != nil) else { return }
+        guard policy.shouldShowAd(finishedGameCount: finishedGameCount, hasRemovedAds: store.hasRemovedAds, adLoaded: interstitial != nil, lastShownAt: lastInterstitialShownAt, now: Date()) else { return }
         guard let viewController, let ad = interstitial else { return }
+        isPresentingInterstitial = true
         ad.present(from: viewController)
     }
 }
 
 extension AdsManager: FullScreenContentDelegate {
+    nonisolated func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
+        Task { @MainActor in
+            lastInterstitialShownAt = Date()
+        }
+    }
+
     nonisolated func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         Task { @MainActor in
+            isPresentingInterstitial = false
             interstitial = nil
             await loadInterstitial()
         }
@@ -94,6 +110,7 @@ extension AdsManager: FullScreenContentDelegate {
 
     nonisolated func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         Task { @MainActor in
+            isPresentingInterstitial = false
             interstitial = nil
             await loadInterstitial()
         }

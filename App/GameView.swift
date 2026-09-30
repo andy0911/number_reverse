@@ -12,36 +12,42 @@ struct GameView: View {
         // 盤は高さに制約のある端末では残りの高さいっぱいに縮むため、ガラス chrome で増えた余白
         // （HandPicker の padding と「タイトルへ」ボタンの高さ・下の余白）を、要素間隔（導入前は 12pt）を詰めて相殺している。
         // これらの値を変えるときは SE 相当の画面で盤の高さを測り直すこと
-        VStack(spacing: 7) {
-            PlayerBar(model: model, player: .second)
-            Text(statusText)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .frame(minHeight: 44)
-            BoardView(model: model)
-            if let message = model.message {
-                Text(message).font(.footnote).foregroundStyle(.red)
+        GeometryReader { geometry in
+            VStack(spacing: 7) {
+                PlayerBar(model: model, player: .second)
+                Text(statusText)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .frame(minHeight: 44)
+                BoardView(model: model)
+                if let message = model.message {
+                    Text(message).font(.footnote).foregroundStyle(.red)
+                }
+                if case .awaitingBombDirection(let owner, _) = model.state.phase {
+                    BombDirectionPicker(model: model, owner: owner)
+                } else {
+                    HandPicker(model: model)
+                }
+                PlayerBar(model: model, player: .first)
+                GameBannerView(
+                    availableWidth: max(0, geometry.size.width - 24),
+                    screenHeight: geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
+                )
+                Spacer(minLength: 0)
             }
-            if case .awaitingBombDirection(let owner, _) = model.state.phase {
-                BombDirectionPicker(model: model, owner: owner)
-            } else {
-                HandPicker(model: model)
+            .padding(.horizontal, 12)
+            .overlay { overlay }
+            .safeAreaInset(edge: .top) {
+                HStack {
+                    Button("タイトルへ", systemImage: "chevron.left", action: exit)
+                        .labelStyle(.titleAndIcon)
+                        .chromeButtonStyle()
+                    Spacer()
+                }
+                .padding(.horizontal)
+                // ガラスのボタンの影が直下のプレイヤーバーに重ならないための余白（高さは上の VStack の間隔で相殺している）
+                .padding(.bottom, 4)
             }
-            PlayerBar(model: model, player: .first)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 12)
-        .overlay { overlay }
-        .safeAreaInset(edge: .top) {
-            HStack {
-                Button("タイトルへ", systemImage: "chevron.left", action: exit)
-                    .labelStyle(.titleAndIcon)
-                    .chromeButtonStyle()
-                Spacer()
-            }
-            .padding(.horizontal)
-            // ガラスのボタンの影が直下のプレイヤーバーに重ならないための余白（高さは上の VStack の間隔で相殺している）
-            .padding(.bottom, 4)
         }
     }
 
