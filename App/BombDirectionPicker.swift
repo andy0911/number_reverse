@@ -9,7 +9,7 @@ struct BombDirectionPicker: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Text("各方向の最初の駒が相手の駒なら 1 枚裏返します（自分の駒なら不発・最大4枚）")
+            Text("各方向の隣接1マスにある相手の駒だけを裏返します（空きマス・×・自分の駒なら不発・最大4枚）")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

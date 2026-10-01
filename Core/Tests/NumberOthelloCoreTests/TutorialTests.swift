@@ -231,7 +231,7 @@ struct TutorialNarrationTests {
         #expect(number.board[at(4, 2)] == piece(.first, .number(9)))
     }
 
-    @Test("爆発: 持ち主（後攻）が選び、各方向で最初に見つかった駒だけ裏返る（自駒に当たると不発）")
+    @Test("爆発: 持ち主（後攻）が選び、各方向の隣接 1 マスの相手駒だけ裏返る")
     func bombExplosion() throws {
         var state = Tutorial.scenario(.bombExplosion).initial
         try state.place(.number(1), at: at(4, 3))
@@ -241,17 +241,20 @@ struct TutorialNarrationTests {
 
         var diagonal = state
         try diagonal.chooseBombDirection(.diagonal)
-        #expect(changed(state.board, diagonal.board) == [at(1, 5), at(6, 4)])
+        #expect(changed(state.board, diagonal.board) == [at(3, 3), at(5, 3)])
+        #expect(diagonal.board[at(1, 5)] == piece(.first, .number(8)))
+        #expect(diagonal.board[at(6, 4)] == piece(.first, .number(2)))
 
         try state.chooseBombDirection(.cross)
         #expect(state.phase == .playing)
         #expect(state.current == .second)
-        // 左・右・下は最初に見つかった駒が先行 → 裏返る
+        // 左・右・下は隣接マスの駒が先行 → 裏返る
         #expect(state.board[at(4, 1)] == piece(.second, .number(1)))
         #expect(state.board[at(4, 3)] == piece(.second, .number(9)))
-        #expect(state.board[at(7, 2)] == piece(.second, .number(3)))
-        // 上は最初に見つかった駒が後攻自身（不発）。その先の (0,2) には届かない
-        #expect(state.board[at(2, 2)] == piece(.second, .number(3)))
+        #expect(state.board[at(5, 2)] == piece(.second, .number(3)))
+        #expect(state.board[at(7, 2)] == piece(.first, .number(7)))
+        // 上は隣の駒が後攻自身（不発）。その先の (0,2) には届かない
+        #expect(state.board[at(3, 2)] == piece(.second, .number(3)))
         #expect(state.board[at(0, 2)] == piece(.first, .number(2)))
         // 右方向は (4,3) で止まるため、その先の (4,5) にも届かない
         #expect(state.board[at(4, 5)] == piece(.first, .number(4)))

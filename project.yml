@@ -52,7 +52,7 @@ targets:
         SWIFT_VERSION: "6.0"
         # MARKETING_VERSION は利用者に見えるバージョン。ビルド番号はアップロードのたびに
         # scripts/testflight.sh が git のコミット数から渡す（ここの値はローカルビルド用）
-        MARKETING_VERSION: "1.1.0"
+        MARKETING_VERSION: "1.1.1"
         CURRENT_PROJECT_VERSION: "1"
     # GENERATE_INFOPLIST_FILE と共存する追加の Info.plist（GADApplicationIdentifier・SKAdNetworkItems は
     # INFOPLIST_KEY_ 形式で表現できないため、Xcode のモダンな Info.plist 生成にこのファイルをマージする）

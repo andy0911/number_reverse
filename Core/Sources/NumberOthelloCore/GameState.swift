@@ -182,13 +182,10 @@ public struct GameState: Hashable, Sendable {
         let bomb = bombQueue.removeFirst()
         events.append(.exploded(bomb.position, owner: bomb.owner, direction))
 
-        // 各方向、最初に見つかった駒だけが対象（空セル・× は読み飛ばす）。自駒に当たるとその方向は不発（合計最大 4 枚）
+        // 各方向、隣接 1 マスの相手駒だけが対象（空セル・×・自駒なら不発、合計最大 4 枚）
         var targets: [Position] = []
         for d in direction.directions {
-            var q = bomb.position.moved(d)
-            while q.isOnBoard, board[q].piece == nil {
-                q = q.moved(d)
-            }
+            let q = bomb.position.moved(d)
             guard q.isOnBoard, board[q].piece?.owner == bomb.owner.opponent else { continue }
             targets.append(q)
         }
