@@ -3,6 +3,9 @@ import UIKit
 import GoogleMobileAds
 import UserMessagingPlatform
 import AppTrackingTransparency
+import os
+
+let adsLogger = Logger(subsystem: "jp.andygrave.tokaeshi", category: "Ads")
 
 /// 同意取得（UMP）・広告 SDK の初期化・インタースティシャルの読み込みと表示・対局カウントを担う。spec §11.1, §11.3
 @MainActor
@@ -49,10 +52,14 @@ final class AdsManager: NSObject {
             try await ConsentForm.loadAndPresentIfRequired(from: nil)
         } catch {
             // 同意フローが失敗した場合は広告を要求しない（安全側に倒す）
+            adsLogger.error("UMP の同意フローに失敗: \(error.localizedDescription, privacy: .public)")
             return
         }
 
-        guard ConsentInformation.shared.canRequestAds else { return }
+        guard ConsentInformation.shared.canRequestAds else {
+            adsLogger.error("UMP: canRequestAds が false（consentStatus=\(ConsentInformation.shared.consentStatus.rawValue, privacy: .public)）")
+            return
+        }
 
         // ATT は UMP の後、画面がアクティブな状態で要求する（非アクティブ中に要求するとダイアログが出ずに終わる）
         if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
@@ -76,7 +83,11 @@ final class AdsManager: NSObject {
 
     private func loadInterstitial() async {
         guard canRequestAds, !store.hasRemovedAds else { return }
-        interstitial = try? await InterstitialAd.load(with: MonetizationConfig.interstitialAdUnitID, request: Request())
+        do {
+            interstitial = try await InterstitialAd.load(with: MonetizationConfig.interstitialAdUnitID, request: Request())
+        } catch {
+            adsLogger.error("インタースティシャルの読み込みに失敗: \(error.localizedDescription, privacy: .public)")
+        }
         interstitial?.fullScreenContentDelegate = self
     }
 
@@ -85,6 +96,10 @@ final class AdsManager: NSObject {
         let trigger = AdTrigger(mode: mode, isMidGameExit: isMidGameExit, didReachFinished: didReachFinished)
         guard trigger.isCountable, !isPresentingInterstitial else { return }
         finishedGameCount += 1
+        // 起動時の読み込みに失敗していた場合に備え、次回の表示機会に向けて読み直す
+        if interstitial == nil {
+            Task { await loadInterstitial() }
+        }
 
         guard policy.shouldShowAd(finishedGameCount: finishedGameCount, hasRemovedAds: store.hasRemovedAds, adLoaded: interstitial != nil, lastShownAt: lastInterstitialShownAt, now: Date()) else { return }
         guard let viewController, let ad = interstitial else { return }
