@@ -4,6 +4,8 @@ import GoogleMobileAds
 import UserMessagingPlatform
 import AppTrackingTransparency
 import os
+import UnityAds
+import UnityAdapter
 
 let adsLogger = Logger(subsystem: "jp.andygrave.tokaeshi", category: "Ads")
 
@@ -12,6 +14,29 @@ let adsLogger = Logger(subsystem: "jp.andygrave.tokaeshi", category: "Ads")
 @Observable
 final class AdsManager: NSObject {
     private(set) var canRequestAds = false
+    private(set) var isPrivacyOptionsRequired = false
+    private(set) var isUpdatingPrivacy = false
+    private(set) var privacyError: String?
+    private(set) var adGeneration = 0
+    private(set) var unityPersonalizationAllowed = UserDefaults.standard.bool(forKey: "ads.unityPersonalizationAllowed")
+    private(set) var isSDKReady = false
+    let bannerMetrics = BannerMetrics()
+    #if MEDIATION_QA
+    // 明示的な対局プレビューだけで使用。購入状態と本番の要求許可は変更しない。
+    var isQABannerPreviewEnabled = false
+    var qaBannerScenario: QABannerScenario = .liveDemo
+    var qaBannerStatus = "要求前"
+    var qaBannerGeometry = "未計測"
+    private(set) var qaStartupAttempts = 0
+    var canShowQABannerPreview: Bool {
+        isQABannerPreviewEnabled && isSDKReady && !isUpdatingPrivacy
+            && ConsentInformation.shared.canRequestAds
+    }
+    #endif
+    private var sdkStarted = false
+    private var startup = AdStartupRecovery()
+    private var startupRetryTask: Task<Void, Never>?
+    private var appliedUnityPersonalization: Bool?
     private var interstitial: InterstitialAd?
     private let policy = AdPolicy.default
     private let store: StoreManager
@@ -35,8 +60,15 @@ final class AdsManager: NSObject {
         super.init()
     }
 
-    /// 起動時に 1 回呼ぶ。UMP の同意フローを経てから広告 SDK を初期化する（spec §11.3）
+    /// 起動・復帰・失敗後の待機終了時。重複と短時間の再試行を抑制する。
     func start() async {
+        guard store.hasLoadedEntitlements, !isUpdatingPrivacy, startup.begin(at: Date()) else { return }
+        startupRetryTask?.cancel()
+        startupRetryTask = nil
+        isUpdatingPrivacy = true
+        #if MEDIATION_QA
+        qaStartupAttempts += 1
+        #endif
         #if DEBUG
         // 日本からは EEA 向けの同意フォームが出ないため、Debug ビルドではジオグラフィーを EEA に固定して動作確認する
         let debugSettings = DebugSettings()
@@ -47,16 +79,27 @@ final class AdsManager: NSObject {
         let parameters = RequestParameters()
         #endif
 
-        do {
+        #if DEBUG && MEDIATION_QA
+        // UI統合試験専用。最初だけ通信失敗と要求不可を模擬し、次回は実UMPへ進む。
+        // 許可への書換えはしない。TestFlight/通常Releaseにはこの入口を含めない。
+        let injectFailure = ProcessInfo.processInfo.arguments.contains("-qaFailFirstConsent") && qaStartupAttempts == 1
+        #else
+        let injectFailure = false
+        #endif
+        defer { isUpdatingPrivacy = false; updatePrivacyRequirement() }
+        let mayRequest = await AdConsentReadiness.resolve(update: {
+            if injectFailure { throw URLError(.notConnectedToInternet) }
             try await ConsentInformation.shared.requestConsentInfoUpdate(with: parameters)
+            if ConsentInformation.shared.consentStatus == .required {
+                resetUnityPersonalization()
+            }
             try await ConsentForm.loadAndPresentIfRequired(from: nil)
-        } catch {
-            // 同意フローが失敗した場合は広告を要求しない（安全側に倒す）
-            adsLogger.error("UMP の同意フローに失敗: \(error.localizedDescription, privacy: .public)")
-            return
-        }
+        }, canRequest: { !injectFailure && ConsentInformation.shared.canRequestAds })
 
-        guard ConsentInformation.shared.canRequestAds else {
+        guard mayRequest.canRequestAds else {
+            // 正常に確定した拒否は再提示しない。通信等の失敗だけを復旧対象にする。
+            if mayRequest.failed { startup.failed(at: Date()); scheduleStartupRetry() }
+            else { startup.succeeded() }
             adsLogger.error("UMP: canRequestAds が false（consentStatus=\(ConsentInformation.shared.consentStatus.rawValue, privacy: .public)）")
             return
         }
@@ -67,11 +110,125 @@ final class AdsManager: NSObject {
             _ = await ATTrackingManager.requestTrackingAuthorization()
         }
 
-        MobileAds.shared.requestConfiguration.maxAdContentRating = .general
-        await MobileAds.shared.start()
+        await resumeAdsWithCurrentPrivacy()
+        if isSDKReady { startup.succeeded() }
+        else { startup.failed(at: Date()); scheduleStartupRetry() }
+    }
+
+    private func scheduleStartupRetry() {
+        guard let retryAt = startup.retryAt else { return }
+        startupRetryTask?.cancel()
+        startupRetryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(max(0, retryAt.timeIntervalSinceNow))) }
+            catch { return }
+            guard let self, UIApplication.shared.applicationState == .active else { return }
+            self.startupRetryTask = nil
+            await self.start()
+        }
+    }
+
+    private func updatePrivacyRequirement() {
+        isPrivacyOptionsRequired = ConsentInformation.shared.privacyOptionsRequirementStatus == .required
+    }
+
+    /// UMP の「広告要求可能」はパーソナライズへの同意ではない。
+    /// Unity の privacy.consent は GDPR より優先されるため、GDPR 対象/不明時は true を送らない。
+    private var effectiveUnityPersonalization: Bool {
+        UnityPrivacyPolicy.permitsPersonalization(
+            explicitlyAllowed: unityPersonalizationAllowed,
+            gdprApplies: UserDefaults.standard.object(forKey: "IABTCF_gdprApplies") as? Int,
+            trackingAuthorized: ATTrackingManager.trackingAuthorizationStatus == .authorized)
+    }
+
+    private func applyUnityPrivacy() {
+        let allowed = effectiveUnityPersonalization
+        appliedUnityPersonalization = allowed
+        let metadata = UADSMetaData()
+        metadata.set("privacy.consent", value: allowed)
+        metadata.commit()
+    }
+
+    private func resetUnityPersonalization() {
+        unityPersonalizationAllowed = false
+        UserDefaults.standard.set(false, forKey: "ads.unityPersonalizationAllowed")
+    }
+
+    private func suspendAdsForPrivacyChange() {
+        canRequestAds = false
+        adGeneration += 1
+        interstitial = nil
+    }
+
+    private func resumeAdsWithCurrentPrivacy() async {
+        applyUnityPrivacy()
+        guard ConsentInformation.shared.canRequestAds else { return }
+        if !sdkStarted {
+            sdkStarted = true
+            #if DEBUG || MEDIATION_QA
+            GADMediationAdapterUnity.testMode = true
+            #endif
+            MobileAds.shared.requestConfiguration.maxAdContentRating = .general
+            await MobileAds.shared.start()
+        }
+        isSDKReady = true
+        // QA版の通常広告は停止。診断画面だけが端末照合後にQA専用枠を要求できる。
+        guard !MonetizationConfig.isQABuild else {
+            canRequestAds = false
+            return
+        }
         canRequestAds = true
         await loadInterstitial()
     }
+
+    /// システム設定でATTを変更して戻った場合も、古い許可と広告を保持しない。
+    func refreshPrivacyAfterActivation() async {
+        guard !isUpdatingPrivacy else { return }
+        if !isSDKReady {
+            await start()
+            return
+        }
+        guard appliedUnityPersonalization != effectiveUnityPersonalization else { return }
+        isUpdatingPrivacy = true
+        suspendAdsForPrivacyChange()
+        await resumeAdsWithCurrentPrivacy()
+        isUpdatingPrivacy = false
+    }
+
+    func presentPrivacyOptions() async {
+        guard !isUpdatingPrivacy else { return }
+        isUpdatingPrivacy = true
+        privacyError = nil
+        // UMP内の包括的な拒否と、以前の独立したUnity許可が矛盾しないよう再選択を必要とする。
+        resetUnityPersonalization()
+        suspendAdsForPrivacyChange()
+        defer { isUpdatingPrivacy = false; updatePrivacyRequirement() }
+        do {
+            try await ConsentForm.presentPrivacyOptionsForm(from: nil)
+        } catch {
+            privacyError = "プライバシー設定を開けませんでした。時間をおいて再度お試しください。"
+        }
+        await resumeAdsWithCurrentPrivacy()
+    }
+
+    func setUnityPersonalizationAllowed(_ allowed: Bool) async {
+        guard !isUpdatingPrivacy else { return }
+        isUpdatingPrivacy = true
+        suspendAdsForPrivacyChange()
+        unityPersonalizationAllowed = allowed
+        UserDefaults.standard.set(allowed, forKey: "ads.unityPersonalizationAllowed")
+        await resumeAdsWithCurrentPrivacy()
+        isUpdatingPrivacy = false
+    }
+
+    #if DEBUG || MEDIATION_QA
+    func presentAdInspector() async {
+        do {
+            try await MobileAds.shared.presentAdInspector(from: nil)
+        } catch {
+            privacyError = "広告診断を開けませんでした: \(error.localizedDescription)"
+        }
+    }
+    #endif
 
     /// アプリがアクティブになるまで待つ（起動直後や UMP フォームを閉じた直後は非アクティブのことがある）
     private func waitUntilActive() async {
@@ -82,9 +239,12 @@ final class AdsManager: NSObject {
     }
 
     private func loadInterstitial() async {
-        guard canRequestAds, !store.hasRemovedAds else { return }
+        guard !MonetizationConfig.isQABuild, canRequestAds, !store.hasRemovedAds else { return }
+        let generation = adGeneration
         do {
-            interstitial = try await InterstitialAd.load(with: MonetizationConfig.interstitialAdUnitID, request: Request())
+            let loaded = try await InterstitialAd.load(with: MonetizationConfig.interstitialAdUnitID, request: Request())
+            guard generation == adGeneration, canRequestAds else { return }
+            interstitial = loaded
         } catch {
             adsLogger.error("インタースティシャルの読み込みに失敗: \(error.localizedDescription, privacy: .public)")
         }
@@ -101,7 +261,7 @@ final class AdsManager: NSObject {
             Task { await loadInterstitial() }
         }
 
-        guard policy.shouldShowAd(finishedGameCount: finishedGameCount, hasRemovedAds: store.hasRemovedAds, adLoaded: interstitial != nil, lastShownAt: lastInterstitialShownAt, now: Date()) else { return }
+        guard canRequestAds, policy.shouldShowAd(finishedGameCount: finishedGameCount, hasRemovedAds: store.hasRemovedAds, adLoaded: interstitial != nil, lastShownAt: lastInterstitialShownAt, now: Date()) else { return }
         guard let viewController, let ad = interstitial else { return }
         isPresentingInterstitial = true
         ad.present(from: viewController)

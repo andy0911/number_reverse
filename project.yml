@@ -12,6 +12,10 @@ packages:
   GoogleMobileAds:
     url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
     exactVersion: 13.10.0
+  # Unity Ads 4.20.1 / adapter 4.20.1.0。更新を再現できるよう公式パッケージのコミットを固定。
+  GoogleMobileAdsMediationUnity:
+    url: https://github.com/googleads/googleads-mobile-ios-mediation-unity.git
+    revision: e7d16cc0820c89154969844801a71b1172b368fa
   GoogleUserMessagingPlatform:
     url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git
     exactVersion: 3.1.0
@@ -23,6 +27,7 @@ targets:
     scheme:
       testTargets:
         - NumberOthelloTests
+        - NumberOthelloUITests
       # StoreKit テスト構成（App Store Connect と通信せずシミュレータで購入・復元を試せる）。
       # 実機の実 App Store には影響しない
       storeKitConfiguration: App/Monetization/StoreKitTest.storekit
@@ -30,11 +35,15 @@ targets:
       - package: NumberOthelloCore
       - package: GoogleMobileAds
         product: GoogleMobileAds
+      - package: GoogleMobileAdsMediationUnity
+        product: UnityAdapterTarget
       - package: GoogleUserMessagingPlatform
         product: GoogleUserMessagingPlatform
     settings:
       base:
         PRODUCT_NAME: Tokaeshi
+        # UnityAdapterの静的Objective-Cカテゴリ（gameIds等）を確実にリンクする。
+        OTHER_LDFLAGS: "$(inherited) -ObjC"
         PRODUCT_BUNDLE_IDENTIFIER: jp.andygrave.tokaeshi
         DEVELOPMENT_TEAM: 377M4Z6S57
         CODE_SIGN_STYLE: Automatic
@@ -52,8 +61,24 @@ targets:
         SWIFT_VERSION: "6.0"
         # MARKETING_VERSION は利用者に見えるバージョン。ビルド番号はアップロードのたびに
         # scripts/testflight.sh が git のコミット数から渡す（ここの値はローカルビルド用）
-        MARKETING_VERSION: "1.1.2"
+        MARKETING_VERSION: "1.1.3"
         CURRENT_PROJECT_VERSION: "1"
+    postBuildScripts:
+      - name: QA enrollment resource
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          output="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/QATestDevice.plist"
+          case " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " in
+            *" MEDIATION_QA "*)
+              if [ -n "${QA_ENROLLMENT_FILE:-}" ]; then
+                cp "$QA_ENROLLMENT_FILE" "$output"
+              else
+                rm -f "$output"
+              fi
+              ;;
+            *) rm -f "$output" ;;
+          esac
     # GENERATE_INFOPLIST_FILE と共存する追加の Info.plist（GADApplicationIdentifier・SKAdNetworkItems は
     # INFOPLIST_KEY_ 形式で表現できないため、Xcode のモダンな Info.plist 生成にこのファイルをマージする）
     info:
@@ -112,6 +137,46 @@ targets:
           - SKAdNetworkIdentifier: 3rd42ekr43.skadnetwork
           - SKAdNetworkIdentifier: 97r2b46745.skadnetwork
           - SKAdNetworkIdentifier: 3qcr597p9d.skadnetwork
+        # Unity 公式一覧を 2026-10-03 に取得。Google の既存 ID と重複しないものを追加。
+          - SKAdNetworkIdentifier: 238da6jt44.skadnetwork
+          - SKAdNetworkIdentifier: 294l99pt4k.skadnetwork
+          - SKAdNetworkIdentifier: 32z4fx6l9h.skadnetwork
+          - SKAdNetworkIdentifier: 424m5254lk.skadnetwork
+          - SKAdNetworkIdentifier: 488r3q3dtq.skadnetwork
+          - SKAdNetworkIdentifier: 4pfyvq9l8r.skadnetwork
+          - SKAdNetworkIdentifier: 4w7y6s5ca2.skadnetwork
+          - SKAdNetworkIdentifier: 5a6flpkh64.skadnetwork
+          - SKAdNetworkIdentifier: 5f5u5tfb26.skadnetwork
+          - SKAdNetworkIdentifier: 5l3tpt7t6e.skadnetwork
+          - SKAdNetworkIdentifier: 5lm9lj6jb7.skadnetwork
+          - SKAdNetworkIdentifier: 5tjdwbrq8w.skadnetwork
+          - SKAdNetworkIdentifier: 6yxyv74ff7.skadnetwork
+          - SKAdNetworkIdentifier: 77y3x8wds4.skadnetwork
+          - SKAdNetworkIdentifier: 9nlqeag3gk.skadnetwork
+          - SKAdNetworkIdentifier: 9rd848q2bz.skadnetwork
+          - SKAdNetworkIdentifier: a8cz6cu7e5.skadnetwork
+          - SKAdNetworkIdentifier: av6w8kgt66.skadnetwork
+          - SKAdNetworkIdentifier: f73kdq92p3.skadnetwork
+          - SKAdNetworkIdentifier: f7s53z58qe.skadnetwork
+          - SKAdNetworkIdentifier: feyaarzu9v.skadnetwork
+          - SKAdNetworkIdentifier: g6gcrrvk4p.skadnetwork
+          - SKAdNetworkIdentifier: glqzh8vgby.skadnetwork
+          - SKAdNetworkIdentifier: k6y4y55b64.skadnetwork
+          - SKAdNetworkIdentifier: lr83yxwka7.skadnetwork
+          - SKAdNetworkIdentifier: m8dbw4sv7c.skadnetwork
+          - SKAdNetworkIdentifier: mj797d8u6f.skadnetwork
+          - SKAdNetworkIdentifier: mp6xlyr22a.skadnetwork
+          - SKAdNetworkIdentifier: mqn7fxpca7.skadnetwork
+          - SKAdNetworkIdentifier: n9x2a789qt.skadnetwork
+          - SKAdNetworkIdentifier: prcb7njmu6.skadnetwork
+          - SKAdNetworkIdentifier: pwa73g5rt2.skadnetwork
+          - SKAdNetworkIdentifier: v79kvwwj4g.skadnetwork
+          - SKAdNetworkIdentifier: vhf287vqwu.skadnetwork
+          - SKAdNetworkIdentifier: w9q455wk68.skadnetwork
+          - SKAdNetworkIdentifier: x44k69ngh6.skadnetwork
+          - SKAdNetworkIdentifier: xga6mpmplv.skadnetwork
+          - SKAdNetworkIdentifier: zmvfpc5aq8.skadnetwork
+          - SKAdNetworkIdentifier: zq492l623r.skadnetwork
   NumberOthelloTests:
     type: bundle.unit-test
     platform: iOS
@@ -125,3 +190,15 @@ targets:
         # PRODUCT_NAME を Tokaeshi に変えているため、ターゲット名から自動算出される既定の TEST_HOST では見つからない
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Tokaeshi.app/Tokaeshi"
         BUNDLE_LOADER: "$(TEST_HOST)"
+
+  NumberOthelloUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [AppUITests]
+    dependencies:
+      - target: NumberOthello
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: NumberOthello

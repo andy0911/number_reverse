@@ -5,6 +5,7 @@ import NumberOthelloCore
 struct PlayerBar: View {
     let model: GameViewModel
     let player: Player
+    var compact = false
 
     var body: some View {
         let isActive = model.actingPlayer == player
@@ -18,7 +19,8 @@ struct PlayerBar: View {
             Text("\(model.state.score(of: player)) マス")
                 .font(.title3.monospacedDigit().bold())
         }
-        .padding(10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, compact ? 4 : 10)
         // ガラスの上に、手番の強調（プレイヤー色の枠）を重ねる
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(

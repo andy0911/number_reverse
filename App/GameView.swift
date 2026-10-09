@@ -7,28 +7,34 @@ struct GameView: View {
     let exit: () -> Void
     @Environment(Monetization.self) private var monetization
 
+    #if MEDIATION_QA
+    @State private var showBannerQA = false
+    #endif
+
     var body: some View {
-        // 不変条件: SE（375×667pt）で盤の高さを、ガラス chrome 導入前（328pt）から削らない（実測 327.5pt）。
-        // 盤は高さに制約のある端末では残りの高さいっぱいに縮むため、ガラス chrome で増えた余白
-        // （HandPicker の padding と「タイトルへ」ボタンの高さ・下の余白）を、要素間隔（導入前は 12pt）を詰めて相殺している。
-        // これらの値を変えるときは SE 相当の画面で盤の高さを測り直すこと
+        // 小画面でも広告枠を維持。手駒は横スクロールにして44pt以上の操作領域を確保。
         GeometryReader { geometry in
-            VStack(spacing: 7) {
-                PlayerBar(model: model, player: .second)
+            let compact = geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom < 750
+            VStack(spacing: compact ? 4 : 7) {
+                PlayerBar(model: model, player: .second, compact: compact)
                 Text(statusText)
                     .font(.headline)
                     .multilineTextAlignment(.center)
                     .frame(minHeight: 44)
                 BoardView(model: model)
+                    #if MEDIATION_QA
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("qaGameBoard")
+                    #endif
                 if let message = model.message {
                     Text(message).font(.footnote).foregroundStyle(.red)
                 }
                 if case .awaitingBombDirection(let owner, _) = model.state.phase {
                     BombDirectionPicker(model: model, owner: owner)
                 } else {
-                    HandPicker(model: model)
+                    HandPicker(model: model, compact: compact)
                 }
-                PlayerBar(model: model, player: .first)
+                PlayerBar(model: model, player: .first, compact: compact)
                 GameBannerView(
                     availableWidth: max(0, geometry.size.width - 24),
                     screenHeight: geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
@@ -43,12 +49,24 @@ struct GameView: View {
                         .labelStyle(.titleAndIcon)
                         .chromeButtonStyle()
                     Spacer()
+                    #if MEDIATION_QA
+                    if monetization.ads.isQABannerPreviewEnabled {
+                        Button { showBannerQA = true } label: {
+                            Text("テスト広告プレビュー")
+                                .font(.caption.bold())
+                                .accessibilityIdentifier("qaBannerPreviewBadge")
+                        }.accessibilityIdentifier("qaBannerStatus")
+                    }
+                    #endif
                 }
                 .padding(.horizontal)
                 // ガラスのボタンの影が直下のプレイヤーバーに重ならないための余白（高さは上の VStack の間隔で相殺している）
                 .padding(.bottom, 4)
             }
         }
+        #if MEDIATION_QA
+        .sheet(isPresented: $showBannerQA) { QABannerControlsView() }
+        #endif
     }
 
     private var statusText: String {
