@@ -5,6 +5,7 @@ import NumberOthelloCore
 @main
 struct NumberOthelloApp: App {
     @State private var monetization = Monetization()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -13,11 +14,17 @@ struct NumberOthelloApp: App {
                 .background { ChromeBackdrop() }
                 .environment(monetization)
                 .task { await monetization.start() }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active {
+                        Task { await monetization.ads.refreshPrivacyAfterActivation() }
+                    }
+                }
         }
     }
 }
 
 struct RootView: View {
+    @Environment(Monetization.self) private var monetization
     @State private var model: GameViewModel? = RootView.debugModel()
 
     /// 動作確認用の起動引数: `-demo` CPU 同士の対局 / `-bombScenario` 爆弾が裏返る直前の盤面 /
@@ -52,7 +59,12 @@ struct RootView: View {
 
     var body: some View {
         if let model {
-            GameView(model: model) { self.model = nil }
+            GameView(model: model) {
+                self.model = nil
+                #if MEDIATION_QA
+                monetization.ads.isQABannerPreviewEnabled = false
+                #endif
+            }
                 .id(ObjectIdentifier(model))
         } else {
             TitleView { model = GameViewModel(mode: $0) }
@@ -64,6 +76,10 @@ struct TitleView: View {
     let start: (GameMode) -> Void
     @Environment(Monetization.self) private var monetization
     @State private var showsCoach = false
+    @State private var showsAdPrivacy = false
+    #if MEDIATION_QA && !BANNER_PREVIEW_QA
+    @State private var showsQA = false
+    #endif
 
     var body: some View {
         VStack(spacing: 20) {
@@ -82,10 +98,34 @@ struct TitleView: View {
             modeButton("CPUと対戦（自分が後攻）", .vsCPU(human: .second))
             Button("遊び方を見る") { showsCoach = true }
                 .chromeButtonStyle()
+            #if MEDIATION_QA
+            Button("テスト広告を表示して対局") {
+                monetization.ads.qaBannerScenario = .liveDemo
+                monetization.ads.isQABannerPreviewEnabled = true
+                start(.twoPlayers)
+            }
+            .accessibilityIdentifier("qaBannerPreviewStart")
+            .accessibilityValue("起動試行: \(monetization.ads.qaStartupAttempts) / SDK: \(monetization.ads.isSDKReady ? "完了" : "待機")")
+            .font(.footnote)
+            Text("Google公式テスト広告の見え方を確認します。購入状態は変更しません。")
+                .font(.caption2)
+            #if !BANNER_PREVIEW_QA
+            Button("広告QA（テスト端末専用）") { showsQA = true }
+                .font(.footnote)
+            #endif
+            Text("広告表示確認 \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""))")
+                .font(.caption2)
+            #endif
             removeAdsSection
+            Button("広告のプライバシー設定") { showsAdPrivacy = true }
+                .font(.footnote)
             Spacer()
         }
         .padding(24)
+        #if MEDIATION_QA && !BANNER_PREVIEW_QA
+        .sheet(isPresented: $showsQA) { QADiagnosticsView() }
+        #endif
+        .sheet(isPresented: $showsAdPrivacy) { AdPrivacyView() }
         // コーチモード（遊び方）。本編のゲーム状態とは独立
         .fullScreenCover(isPresented: $showsCoach) {
             CoachModeView { showsCoach = false }
@@ -93,7 +133,12 @@ struct TitleView: View {
     }
 
     private func modeButton(_ title: String, _ mode: GameMode) -> some View {
-        Button { start(mode) } label: {
+        Button {
+            #if MEDIATION_QA
+            monetization.ads.isQABannerPreviewEnabled = false
+            #endif
+            start(mode)
+        } label: {
             Text(title).frame(maxWidth: .infinity)
         }
         .buttonStyle(.glassProminent)

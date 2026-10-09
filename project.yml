@@ -27,6 +27,7 @@ targets:
     scheme:
       testTargets:
         - NumberOthelloTests
+        - NumberOthelloUITests
       # StoreKit テスト構成（App Store Connect と通信せずシミュレータで購入・復元を試せる）。
       # 実機の実 App Store には影響しない
       storeKitConfiguration: App/Monetization/StoreKitTest.storekit
@@ -41,6 +42,8 @@ targets:
     settings:
       base:
         PRODUCT_NAME: Tokaeshi
+        # UnityAdapterの静的Objective-Cカテゴリ（gameIds等）を確実にリンクする。
+        OTHER_LDFLAGS: "$(inherited) -ObjC"
         PRODUCT_BUNDLE_IDENTIFIER: jp.andygrave.tokaeshi
         DEVELOPMENT_TEAM: 377M4Z6S57
         CODE_SIGN_STYLE: Automatic
@@ -58,8 +61,24 @@ targets:
         SWIFT_VERSION: "6.0"
         # MARKETING_VERSION は利用者に見えるバージョン。ビルド番号はアップロードのたびに
         # scripts/testflight.sh が git のコミット数から渡す（ここの値はローカルビルド用）
-        MARKETING_VERSION: "1.1.2"
+        MARKETING_VERSION: "1.1.3"
         CURRENT_PROJECT_VERSION: "1"
+    postBuildScripts:
+      - name: QA enrollment resource
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          output="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/QATestDevice.plist"
+          case " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " in
+            *" MEDIATION_QA "*)
+              if [ -n "${QA_ENROLLMENT_FILE:-}" ]; then
+                cp "$QA_ENROLLMENT_FILE" "$output"
+              else
+                rm -f "$output"
+              fi
+              ;;
+            *) rm -f "$output" ;;
+          esac
     # GENERATE_INFOPLIST_FILE と共存する追加の Info.plist（GADApplicationIdentifier・SKAdNetworkItems は
     # INFOPLIST_KEY_ 形式で表現できないため、Xcode のモダンな Info.plist 生成にこのファイルをマージする）
     info:
@@ -171,3 +190,15 @@ targets:
         # PRODUCT_NAME を Tokaeshi に変えているため、ターゲット名から自動算出される既定の TEST_HOST では見つからない
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Tokaeshi.app/Tokaeshi"
         BUNDLE_LOADER: "$(TEST_HOST)"
+
+  NumberOthelloUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [AppUITests]
+    dependencies:
+      - target: NumberOthello
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: NumberOthello

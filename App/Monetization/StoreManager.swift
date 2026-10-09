@@ -6,6 +6,7 @@ import StoreKit
 @Observable
 final class StoreManager {
     private(set) var hasRemovedAds = false
+    private(set) var hasLoadedEntitlements = false
     private(set) var removeAdsProduct: Product?
     private(set) var isLoading = false
     private(set) var errorMessage: String?
@@ -26,7 +27,8 @@ final class StoreManager {
     /// 起動時に 1 回呼ぶ: 商品情報の取得と、既存の所有権（過去の購入）の反映
     func start() async {
         await refreshEntitlements()
-        await loadProduct()
+        // 価格取得の通信は所有権の確定後、広告初期化と独立して進める。
+        Task { await loadProduct() }
     }
 
     private func loadProduct() async {
@@ -40,16 +42,22 @@ final class StoreManager {
     }
 
     private func refreshEntitlements() async {
+        var ownsRemoveAds = false
         for await entitlement in Transaction.currentEntitlements {
-            if case .verified(let transaction) = entitlement, transaction.productID == MonetizationConfig.removeAdsProductID {
-                hasRemovedAds = true
+            if case .verified(let transaction) = entitlement,
+               transaction.productID == MonetizationConfig.removeAdsProductID,
+               transaction.revocationDate == nil {
+                ownsRemoveAds = true
             }
         }
+        hasRemovedAds = ownsRemoveAds
+        hasLoadedEntitlements = true
     }
 
     private func apply(_ transaction: Transaction) async {
         if transaction.productID == MonetizationConfig.removeAdsProductID {
-            hasRemovedAds = true
+            hasRemovedAds = transaction.revocationDate == nil
+            hasLoadedEntitlements = true
         }
         await transaction.finish()
     }
