@@ -61,7 +61,7 @@ targets:
         SWIFT_VERSION: "6.0"
         # MARKETING_VERSION は利用者に見えるバージョン。ビルド番号はアップロードのたびに
         # scripts/testflight.sh が git のコミット数から渡す（ここの値はローカルビルド用）
-        MARKETING_VERSION: "1.1.3"
+        MARKETING_VERSION: "1.1.4"
         CURRENT_PROJECT_VERSION: "1"
     postBuildScripts:
       - name: QA enrollment resource
