@@ -8,7 +8,7 @@ struct HandPicker: View {
 
     var body: some View {
         let player: Player = switch model.mode {
-        case .vsCPU(let human): human
+        case .vsCPU(let human, _): human
         case .twoPlayers, .cpuOnly: model.actingPlayer ?? model.state.current
         }
         let hand = model.state.hand(of: player)

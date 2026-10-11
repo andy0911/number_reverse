@@ -77,6 +77,8 @@ struct TitleView: View {
     @Environment(Monetization.self) private var monetization
     @State private var showsCoach = false
     @State private var showsAdPrivacy = false
+    @State private var pendingHumanPlayer: Player?
+    @State private var showsDifficultyPicker = false
     #if MEDIATION_QA && !BANNER_PREVIEW_QA
     @State private var showsQA = false
     #endif
@@ -94,8 +96,8 @@ struct TitleView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             modeButton("2人で対戦", .twoPlayers)
-            modeButton("CPUと対戦（自分が先行）", .vsCPU(human: .first))
-            modeButton("CPUと対戦（自分が後攻）", .vsCPU(human: .second))
+            cpuButton("CPUと対戦（自分が先行）", human: .first)
+            cpuButton("CPUと対戦（自分が後攻）", human: .second)
             Button("遊び方を見る") { showsCoach = true }
                 .chromeButtonStyle()
             #if MEDIATION_QA
@@ -130,6 +132,36 @@ struct TitleView: View {
         .fullScreenCover(isPresented: $showsCoach) {
             CoachModeView { showsCoach = false }
         }
+        // CPU 難易度選択
+        .confirmationDialog(
+            "難易度を選ぶ",
+            isPresented: $showsDifficultyPicker,
+            presenting: pendingHumanPlayer
+        ) { player in
+            ForEach(CPUDifficulty.allCases, id: \.self) { difficulty in
+                Button(difficulty.displayName) {
+                    #if MEDIATION_QA
+                    monetization.ads.isQABannerPreviewEnabled = false
+                    #endif
+                    start(.vsCPU(human: player, difficulty: difficulty))
+                }
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: { player in
+            Text("対戦相手の強さを選んでください")
+        }
+    }
+
+    /// CPU 対戦は難易度を選んでから開始する（`modeButton` と同じ見た目）
+    private func cpuButton(_ title: String, human: Player) -> some View {
+        Button {
+            pendingHumanPlayer = human
+            showsDifficultyPicker = true
+        } label: {
+            Text(title).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.large)
     }
 
     private func modeButton(_ title: String, _ mode: GameMode) -> some View {

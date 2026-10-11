@@ -82,3 +82,40 @@ struct AITests {
         #expect(move == Move(.bomb, at: Position(1, 1)))
     }
 }
+
+struct HardVsClassicTests {
+    /// 位置評価＋終盤全読みの新「つよい」が旧「つよい」に勝ち越すかを計測する
+    @Test("新つよい vs 旧つよい（先後入れ替え）")
+    func newHardBeatsClassic() throws {
+        var newWins = 0, oldWins = 0, draws = 0
+        let games = 12
+        for seed in 0..<UInt64(games) {
+            for newIsFirst in [true, false] {
+                var rng = SeededRNG(state: seed &+ 100)
+                var state = GameState()
+                var model = [Player.first: OpponentModel(), .second: OpponentModel()]
+                let newAI = ReadingAI(profile: .hard), oldAI = ReadingAI(profile: .hardClassic)
+                var guardCount = 0
+                while state.outcome == nil, guardCount < 400 {
+                    guardCount += 1
+                    if case .awaitingBombDirection = state.phase {
+                        try state.chooseBombDirection(GreedyAI.bestDirection(in: state, for: state.current))
+                        continue
+                    }
+                    let p = state.current
+                    let useNew = (p == .first) == newIsFirst
+                    let ai = useNew ? newAI : oldAI
+                    let r = ai.chooseMove(in: state, opponentModel: model[p]!, using: &rng)
+                    model[p] = r.updatedModel
+                    guard let m = r.move else { break }
+                    try state.place(m.kind, at: m.position)
+                }
+                let newP: Player = newIsFirst ? .first : .second
+                let a = state.score(of: newP), b = state.score(of: newP.opponent)
+                if a > b { newWins += 1 } else if b > a { oldWins += 1 } else { draws += 1 }
+            }
+        }
+        print("新つよい \(newWins) 勝 / 旧つよい \(oldWins) 勝 / 引分 \(draws)（\(games * 2) 局）")
+        #expect(newWins >= oldWins)
+    }
+}
