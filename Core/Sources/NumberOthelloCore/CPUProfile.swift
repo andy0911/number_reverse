@@ -46,29 +46,34 @@ public struct CPUProfile: Sendable {
 
     /// 標準的な難易度プリセット
 
-    /// かんたん: 1手読み + 高温ゆらぎ + 記憶誤り + 爆弾ミス
-    /// 人間が十分に勝てる
+    /// かんたん: 2手読み + 高温ゆらぎ + 記憶誤り
+    /// 人間代理（2手読み・低ゆらぎ）に対し人間側の勝率が約70%になるよう校正
     public static let easy = CPUProfile(
-        searchDepth: 1,
-        selectionTemperature: 2.0,
+        searchDepth: 2,
+        selectionTemperature: 1.5,
         handMemoryErrorRate: 0.15,
-        bombDirectionErrorRate: 0.3,
-        opponentModelLearningThreshold: 100
+        bombDirectionErrorRate: 0.05,
+        opponentModelLearningThreshold: 100,
+        positionalWeight: 1,
+        rootBreadth: 6,
+        searchBreadth: 6
     )
 
-    /// ふつう: 1手読み + 低温ゆらぎ（ほぼ確定的）
-    /// 現状の GreedyAI に近い（ゆらぎのみ追加）
+    /// ふつう: 2手読み + 低温ゆらぎ
+    /// 人間代理に対し人間側の勝率が約40%になるよう校正
     public static let normal = CPUProfile(
-        searchDepth: 1,
-        selectionTemperature: 0.3,
+        searchDepth: 2,
+        selectionTemperature: 0.5,
         handMemoryErrorRate: 0.05,
-        bombDirectionErrorRate: 0.1,
-        opponentModelLearningThreshold: 100
+        bombDirectionErrorRate: 0.05,
+        opponentModelLearningThreshold: 100,
+        positionalWeight: 1,
+        rootBreadth: 6,
+        searchBreadth: 6
     )
 
-    /// つよい: 3手読み（読み合いが成立）
-    /// 相手の上位K手に限定して枝刈りし、相手の返し手と自分の反撃手を読む
-    /// 人間には苦戦を強いられる
+    /// つよい: 3手読み + 位置評価 + 終盤全読み
+    /// 人間代理に対し人間側の勝率が約10%になるよう校正
     public static let hard = CPUProfile(
         searchDepth: 3,
         selectionTemperature: 0.1,
