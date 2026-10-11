@@ -7,6 +7,9 @@ struct GameView: View {
     let exit: () -> Void
     @Environment(Monetization.self) private var monetization
 
+    /// 対局終了後に結果ダイアログを閉じて最終盤面を見ている状態（感想戦）
+    @State private var isReviewing = false
+
     #if MEDIATION_QA
     @State private var showBannerQA = false
     #endif
@@ -31,6 +34,8 @@ struct GameView: View {
                 }
                 if case .awaitingBombDirection(let owner, _) = model.state.phase {
                     BombDirectionPicker(model: model, owner: owner)
+                } else if isReviewing {
+                    ReviewBar(showResult: { isReviewing = false }, backToTitle: exitAfterResult)
                 } else {
                     HandPicker(model: model, compact: compact)
                 }
@@ -45,7 +50,7 @@ struct GameView: View {
             .overlay { overlay }
             .safeAreaInset(edge: .top) {
                 HStack {
-                    Button("タイトルへ", systemImage: "chevron.left", action: exit)
+                    Button("タイトルへ", systemImage: "chevron.left", action: model.state.phase == .finished ? exitAfterResult : exit)
                         .labelStyle(.titleAndIcon)
                         .chromeButtonStyle()
                     Spacer()
@@ -80,14 +85,15 @@ struct GameView: View {
         case .awaitingBombDirection(let owner, _):
             return model.isCPUThinking ? "CPU が爆発方向を選択中…" : "\(owner.displayName)の爆弾が裏返された！爆発方向を選択"
         case .finished:
-            return "ゲーム終了"
+            return "\(resultText)　\(model.state.score(of: .first)) − \(model.state.score(of: .second))"
         }
     }
 
     @ViewBuilder private var overlay: some View {
         switch model.state.phase {
-        case .finished:
+        case .finished where !isReviewing:
             DialogCard(title: resultText, subtitle: "先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻") {
+                Button("盤面を見る") { isReviewing = true }.buttonStyle(.glass)
                 Button("タイトルへ", action: exitAfterResult).buttonStyle(.glassProminent)
             }
         default:
@@ -112,5 +118,29 @@ struct GameView: View {
             from: UIViewController.topMost()
         )
         exit()
+    }
+}
+
+/// 感想戦中に手駒ピッカーの位置へ出す操作バー（結果文は上部の statusText が持つ）
+private struct ReviewBar: View {
+    let showResult: () -> Void
+    let backToTitle: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("感想戦中（盤面を確認できます）")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            GlassEffectContainer {
+                HStack(spacing: 12) {
+                    Button("結果を表示", action: showResult)
+                        .buttonStyle(.glass)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                    Button("タイトルへ", action: backToTitle)
+                        .buttonStyle(.glassProminent)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+            }
+        }
     }
 }

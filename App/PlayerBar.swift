@@ -13,6 +13,13 @@ struct PlayerBar: View {
             ChipDot(owner: player).frame(width: 18, height: 18)
             Text(player.displayName + (model.mode.isCPU(player) ? "（CPU）" : ""))
                 .fontWeight(isActive ? .bold : .regular)
+            if model.state.outcome == .win(player) {
+                Text("勝ち")
+                    .font(.caption.bold())
+                    .foregroundStyle(Theme.chipText)
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(player.color, in: Capsule())
+            }
             Spacer()
             Text("手駒 \(model.state.hand(of: player).total)")
                 .foregroundStyle(.secondary)
