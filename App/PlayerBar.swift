@@ -9,6 +9,7 @@ struct PlayerBar: View {
 
     var body: some View {
         let isActive = model.actingPlayer == player
+        let isWinner = model.state.outcome == .win(player)
         let score = model.state.score(of: player)
         HStack {
             ChipDot(owner: player).frame(width: 18, height: 18)
@@ -27,9 +28,11 @@ struct PlayerBar: View {
             if model.state.outcome == .win(player) {
                 Text("勝ち")
                     .font(.caption.bold())
-                    .foregroundStyle(Theme.chipText)
+                    // 色の上の白文字はコントラスト不足（先行色で約 1.9:1）なので、色は縁と薄い地に使い文字は通常色にする
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 8).padding(.vertical, 2)
-                    .background(player.color, in: Capsule())
+                    .background(player.color.opacity(0.28), in: Capsule())
+                    .overlay(Capsule().strokeBorder(player.color, lineWidth: 1.5))
             }
             Spacer()
             Text("手駒 \(model.state.hand(of: player).total)")
@@ -45,9 +48,9 @@ struct PlayerBar: View {
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(isActive ? player.color : .clear, lineWidth: 3)
+                .strokeBorder(isActive || isWinner ? player.color : .clear, lineWidth: 3)
         )
-        .shadow(color: isActive ? player.color.opacity(0.5) : .clear, radius: 10)
+        .shadow(color: isActive || isWinner ? player.color.opacity(0.5) : .clear, radius: 10)
         .animation(.snappy(duration: 0.3), value: isActive)
         .animation(.snappy(duration: 0.3), value: score)
     }

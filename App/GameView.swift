@@ -72,6 +72,10 @@ struct GameView: View {
         #endif
         // 置いた瞬間の手応え（人間・CPU どちらの手でも）
         .sensoryFeedback(.impact(weight: .medium), trigger: model.lastPlaced)
+        // 勝敗が決まった瞬間に 1 回だけ（結果カードへ戻るたびには鳴らさない）
+        .sensoryFeedback(.success, trigger: model.state.phase == .finished) { _, finished in
+            finished && model.state.outcome != .draw
+        }
     }
 
     /// 手番の駒と文言。駒の色で誰の番かを一目で示す（高さは文言のみのときと同じ）
@@ -99,7 +103,7 @@ struct GameView: View {
         case .awaitingBombDirection(let owner, _):
             return model.isCPUThinking ? "CPU が爆発方向を選択中…" : "\(owner.displayName)の爆弾が裏返された！爆発方向を選択"
         case .finished:
-            return "\(resultText)　\(model.state.score(of: .first)) − \(model.state.score(of: .second))"
+            return "\(resultText)　先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻"
         }
     }
 
@@ -157,14 +161,17 @@ private struct ReviewBar: View {
                 .foregroundStyle(.secondary)
             GlassEffectContainer {
                 HStack(spacing: 12) {
-                    Button("結果を表示", action: showResult)
-                        .buttonStyle(.glass)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                    Button("タイトルへ", action: backToTitle)
-                        .buttonStyle(.glassProminent)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                    Button(action: showResult) {
+                        Text("結果を表示").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.glass)
+                    Button(action: backToTitle) {
+                        Text("タイトルへ").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.glassProminent)
                 }
             }
+            .controlSize(.large)
         }
     }
 }
