@@ -42,8 +42,7 @@ struct CoachBoardView: View {
             isFlipped: flipped.contains(p),
             isLastPlaced: placed.contains(p)
         )
-        // 実演で裏返るマスだけ、切り替わりの瞬間に 1 回転させる（perform() の withAnimation で駆動）
-        .rotation3DEffect(.degrees(flipped.contains(p) ? 360 : 0), axis: (x: 0, y: 1, z: 0))
+        // 裏返しの回転は ChipView 自身が持つ（本編と同じ動き）
         .background(
             GeometryReader { geo in
                 Color.clear.preference(key: CellFramesKey.self, value: [p: geo.frame(in: .named(Self.space))])
