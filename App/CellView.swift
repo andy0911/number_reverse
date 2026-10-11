@@ -13,7 +13,7 @@ struct CellView: View {
         ZStack {
             Rectangle().fill(background)
             if isHighlighted {
-                Circle().fill(Color.accentColor.opacity(0.35)).padding(12)
+                HintMarker()
             }
             switch cell {
             case .empty:
@@ -37,5 +37,24 @@ struct CellView: View {
         case .blue: Theme.zoneBlue
         case .red: Theme.zoneRed
         }
+    }
+}
+
+/// 置ける場所の目印。ゆっくり脈打つリング（動きを減らす設定では静止）。
+/// 色は盤の点線と同じ動的カラー（ライト=黒 / ダーク=白）で、3 ゾーンのどの上でも見える
+private struct HintMarker: View {
+    @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Circle()
+            .fill(Theme.boardDivider.opacity(0.14))
+            .overlay(Circle().strokeBorder(Theme.boardDivider.opacity(0.6), lineWidth: 2))
+            .padding(10)
+            .scaleEffect(pulse ? 1.08 : 0.92)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { pulse = true }
+            }
     }
 }

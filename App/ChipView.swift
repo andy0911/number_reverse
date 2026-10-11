@@ -17,12 +17,27 @@ struct ChipView: View {
     /// 直前に置かれた駒（白リング）
     let isLastPlaced: Bool
 
+    /// 実際に描いている駒。所有者が変わったとき、回転が 90° に達した瞬間に切り替えて「裏返る」動きにする
+    @State private var shown: Piece
+    @State private var flipAngle: Double = 0
+    /// 置かれた直後の落下（拡大 → 等倍）。最後に置かれた駒だけが対象で、盤を開いた時点の駒は動かさない
+    @State private var dropScale: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(piece: Piece, isFlipped: Bool, isLastPlaced: Bool) {
+        self.piece = piece
+        self.isFlipped = isFlipped
+        self.isLastPlaced = isLastPlaced
+        _shown = State(initialValue: piece)
+        _dropScale = State(initialValue: isLastPlaced ? 1.45 : 1)
+    }
+
     private var ringColor: Color? {
         isFlipped ? Theme.flippedRing : (isLastPlaced ? Theme.lastPlacedRing : nil)
     }
 
     var body: some View {
-        ChipBase(color: piece.owner.color, thickness: 2) {
+        ChipBase(color: shown.owner.color, thickness: 2) {
             GeometryReader { proxy in
                 let layout = ChipLayout(diameter: min(proxy.size.width, proxy.size.height))
                 ZStack {
@@ -38,7 +53,7 @@ struct ChipView: View {
                     // 数字の背後の窪みと文字影には、数字の色（chipText）の明暗に対応する値を外観ごとに設定している
                     // （chipText とは独立したトークンなので、chipText を変えるときは見直すこと）
                     Circle().inset(by: layout.recessInset).fill(Theme.chipRecess)
-                    Text(piece.kind.description)
+                    Text(shown.kind.description)
                         .font(.system(size: layout.fontSize, weight: .heavy, design: .rounded))
                         .foregroundStyle(Theme.chipText)
                         .shadow(color: Theme.chipTextShadow, radius: 0.5, y: 0.5)
@@ -49,6 +64,28 @@ struct ChipView: View {
             if let ringColor {
                 Circle().strokeBorder(ringColor, lineWidth: ChipLayout.bandWidth)
                 Circle().inset(by: ChipLayout.bandWidth).strokeBorder(Theme.chipRingKeyline, lineWidth: ChipLayout.keylineWidth)
+            }
+        }
+        .rotation3DEffect(.degrees(flipAngle), axis: (x: 0, y: 1, z: 0))
+        .scaleEffect(dropScale)
+        .onAppear {
+            guard dropScale != 1 else { return }
+            if reduceMotion { dropScale = 1 } else {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.55)) { dropScale = 1 }
+            }
+        }
+        .onChange(of: piece) { old, new in
+            // 数字や種類だけが変わる場合（コーチモードの場面切替）は動かさず即時に差し替える
+            guard old.owner != new.owner, !reduceMotion else {
+                shown = new
+                return
+            }
+            withAnimation(.easeIn(duration: 0.16)) {
+                flipAngle = 90
+            } completion: {
+                shown = piece
+                flipAngle = -90
+                withAnimation(.easeOut(duration: 0.2)) { flipAngle = 0 }
             }
         }
     }
@@ -111,7 +148,7 @@ struct ChipDot: View {
 
 /// チップの土台: 側面（厚み）＋ドーム状の陰影＋左上の光沢＋縁の斜光。
 /// `content` は円の内側（上面）で斜光より下に、`top` は斜光より手前に重ねる。
-private struct ChipBase<Content: View, Top: View>: View {
+struct ChipBase<Content: View, Top: View>: View {
     let color: Color
     /// 側面の厚み（pt）。下方向にずらした暗い円で表現する
     let thickness: CGFloat
@@ -153,7 +190,7 @@ private struct ChipBase<Content: View, Top: View>: View {
 }
 
 /// 縁の刻み。外周から `inset` 内側に、放射状の短冊を `count` 個等間隔で並べる
-private struct ChipNotches: Shape {
+struct ChipNotches: Shape {
     let count: Int
     let inset: CGFloat
     let depth: CGFloat
