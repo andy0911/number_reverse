@@ -17,9 +17,7 @@ struct GameView: View {
             let compact = geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom < 750
             VStack(spacing: compact ? 4 : 7) {
                 PlayerBar(model: model, player: .second, compact: compact)
-                Text(statusText)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
+                statusLine
                     .frame(minHeight: 44)
                 BoardView(model: model)
                     #if MEDIATION_QA
@@ -67,6 +65,22 @@ struct GameView: View {
         #if MEDIATION_QA
         .sheet(isPresented: $showBannerQA) { QABannerControlsView() }
         #endif
+        // 置いた瞬間の手応え（人間・CPU どちらの手でも）
+        .sensoryFeedback(.impact(weight: .medium), trigger: model.lastPlaced)
+    }
+
+    /// 手番の駒と文言。駒の色で誰の番かを一目で示す（高さは文言のみのときと同じ）
+    private var statusLine: some View {
+        HStack(spacing: 8) {
+            if let player = model.actingPlayer {
+                ChipDot(owner: player).frame(width: 20, height: 20)
+            }
+            Text(statusText)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .contentTransition(.opacity)
+        }
+        .animation(.easeInOut(duration: 0.2), value: statusText)
     }
 
     private var statusText: String {
@@ -87,19 +101,18 @@ struct GameView: View {
     @ViewBuilder private var overlay: some View {
         switch model.state.phase {
         case .finished:
-            DialogCard(title: resultText, subtitle: "先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻") {
-                Button("タイトルへ", action: exitAfterResult).buttonStyle(.glassProminent)
+            ResultCard(
+                outcome: model.state.outcome,
+                firstScore: model.state.score(of: .first),
+                secondScore: model.state.score(of: .second)
+            ) {
+                Button(action: exitAfterResult) {
+                    Text("タイトルへ").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.glassProminent)
             }
         default:
             EmptyView()
-        }
-    }
-
-    private var resultText: String {
-        switch model.state.outcome {
-        case .win(let p): "\(p.displayName)の勝ち！"
-        case .draw: "引き分け"
-        case nil: ""
         }
     }
 

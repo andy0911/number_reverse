@@ -1,16 +1,39 @@
 import SwiftUI
 import NumberOthelloCore
 
+/// CPU の難易度（読み合い対応版）
+enum CPUDifficulty: Hashable, CaseIterable {
+    case easy
+    case normal
+    case hard
+
+    var displayName: String {
+        switch self {
+        case .easy: "かんたん"
+        case .normal: "ふつう"
+        case .hard: "つよい"
+        }
+    }
+
+    var profile: CPUProfile {
+        switch self {
+        case .easy: .easy
+        case .normal: .normal
+        case .hard: .hard
+        }
+    }
+}
+
 enum GameMode: Hashable {
     case twoPlayers
-    case vsCPU(human: Player)
+    case vsCPU(human: Player, difficulty: CPUDifficulty = .normal)
     /// 動作確認用の CPU 同士の対局（起動引数 `-demo`）
     case cpuOnly
 
     func isCPU(_ player: Player) -> Bool {
         switch self {
         case .twoPlayers: false
-        case .vsCPU(let human): player != human
+        case .vsCPU(let human, _): player != human
         case .cpuOnly: true
         }
     }
@@ -35,11 +58,25 @@ final class GameViewModel {
     private(set) var lastFlipped: Set<Position> = []
     private(set) var lastPlaced: Position?
     private(set) var isCPUThinking = false
-    private let ai = GreedyAI()
+
+    /// CPU のプロフィール（難易度）
+    private let cpuProfile: CPUProfile
+
+    /// 対局中に蓄積される相手の戦略推定
+    private(set) var opponentModel: OpponentModel = OpponentModel()
 
     init(mode: GameMode, state: GameState = GameState()) {
         self.mode = mode
         self.state = state
+
+        // 難易度に応じてプロフィールを設定
+        self.cpuProfile = switch mode {
+        case .vsCPU(_, let difficulty):
+            difficulty.profile
+        case .twoPlayers, .cpuOnly:
+            .normal
+        }
+
         scheduleCPUIfNeeded()
     }
 
@@ -121,15 +158,20 @@ final class GameViewModel {
         guard let p = actingPlayer, mode.isCPU(p), !isCPUThinking else { return }
         isCPUThinking = true
         let snapshot = state
-        let ai = ai
+        let profile = cpuProfile
+        let model = opponentModel
         Task {
             try? await Task.sleep(for: .milliseconds(600))
-            let decision: CPUDecision = await Task.detached(priority: .userInitiated) {
+            let (decision, updatedModel): (CPUDecision, OpponentModel) = await Task.detached(priority: .userInitiated) {
+                var rng = SystemRandomNumberGenerator()
+                let ai = ReadingAI(profile: profile)
                 if case .awaitingBombDirection = snapshot.phase {
-                    return .bomb(ai.chooseBombDirection(in: snapshot))
+                    return (.bomb(ai.chooseBombDirection(in: snapshot, using: &rng)), model)
                 }
-                return .move(ai.chooseMove(in: snapshot))
+                let (move, newModel) = ai.chooseMove(in: snapshot, opponentModel: model, using: &rng)
+                return (.move(move), newModel)
             }.value
+            self.opponentModel = updatedModel
             isCPUThinking = false
             switch decision {
             case .bomb(let d): applyBomb(d)

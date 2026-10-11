@@ -85,3 +85,14 @@ extension Theme {
     static let backdropTop = Color(light: UIColor(red: 0.96, green: 0.97, blue: 0.99, alpha: 1), dark: UIColor(red: 0.11, green: 0.12, blue: 0.15, alpha: 1))
     static let backdropBottom = Color(light: UIColor(red: 0.87, green: 0.90, blue: 0.95, alpha: 1), dark: UIColor(red: 0.05, green: 0.06, blue: 0.08, alpha: 1))
 }
+
+// MARK: - ブランド・タイトル
+// タイトル画面（TitleView / HeroChip）用。アプリアイコンと同じ「橙と緑に塗り分けた駒に十」のモチーフを描く。
+extension Theme {
+    /// アプリ全体の強調色（`.tint`）。ライトは白文字を載せられる濃い緑（白との比 約 5.5:1）、
+    /// ダークは暗い背景でリンク・ボタン文字が読める明るい緑（上に載せる文字は `chipText`＝暗色）
+    static let brandTint = Color(light: UIColor(red: 0.07, green: 0.47, blue: 0.34, alpha: 1), dark: UIColor(red: 0.22, green: 0.78, blue: 0.58, alpha: 1))
+    /// 紋章の中央の紙色と墨色。駒の色（外観で変わる）と違い、紋章自体の絵として固定する
+    static let heroPaper = Color(red: 0.99, green: 0.97, blue: 0.93)
+    static let heroInk = Color(red: 0.10, green: 0.16, blue: 0.30)
+}
