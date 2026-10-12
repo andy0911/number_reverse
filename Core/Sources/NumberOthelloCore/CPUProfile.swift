@@ -72,9 +72,25 @@ public struct CPUProfile: Sendable {
         searchBreadth: 6
     )
 
-    /// つよい: 3手読み + 位置評価 + 終盤全読み
-    /// 人間代理に対し人間側の勝率が約10%になるよう校正
+    /// つよい: 6手読み + 位置評価 + 広い終盤全読み + ゆらぎなし
+    /// 旧「つよい」（`hardPrevious`）に勝ち越すことを AITests で確認している。
+    /// 1 手の探索はノード数の上限（`nodeBudget`）で打ち切るので、端末が遅くても考える時間は有限
     public static let hard = CPUProfile(
+        searchDepth: 6,
+        selectionTemperature: 0,
+        handMemoryErrorRate: 0,
+        bombDirectionErrorRate: 0,
+        opponentModelLearningThreshold: 0,
+        positionalWeight: 1,
+        endgameSolveCells: 11,
+        rootBreadth: 12,
+        searchBreadth: 8,
+        nodeBudget: 1_500_000,
+        endgameBudget: 1_500_000
+    )
+
+    /// 1 つ前の「つよい」（3手読み + 位置評価 + 終盤7マス全読み。比較用）
+    public static let hardPrevious = CPUProfile(
         searchDepth: 3,
         selectionTemperature: 0.1,
         handMemoryErrorRate: 0.02,
