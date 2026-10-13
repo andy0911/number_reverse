@@ -173,6 +173,8 @@ struct TitleView: View {
             removeAdsSection
             Button("広告のプライバシー設定") { showsAdPrivacy = true }
                 .font(.footnote)
+            Link("原案: @bdgame_", destination: URL(string: "https://x.com/bdgame_")!)
+                .font(.footnote)
         }
     }
 
