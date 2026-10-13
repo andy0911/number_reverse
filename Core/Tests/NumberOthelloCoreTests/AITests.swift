@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import NumberOthelloCore
 
@@ -116,6 +117,50 @@ struct HardVsClassicTests {
             }
         }
         print("新つよい \(newWins) 勝 / 旧つよい \(oldWins) 勝 / 引分 \(draws)（\(games * 2) 局）")
+        #expect(newWins >= oldWins)
+    }
+}
+
+struct HardVsPreviousTests {
+    /// 強化した「つよい」が 1 つ前の「つよい」に勝ち越すこと、1 手の思考時間が現実的なことを計測する
+    @Test("新つよい vs 前のつよい（先後入れ替え）")
+    func newHardBeatsPrevious() throws {
+        var newWins = 0, oldWins = 0, draws = 0
+        var maxMove = 0.0, totalMove = 0.0, moveCount = 0
+        let games = 6
+        for seed in 0..<UInt64(games) {
+            for newIsFirst in [true, false] {
+                var rng = SeededRNG(state: seed &+ 500)
+                var state = GameState()
+                var model = [Player.first: OpponentModel(), .second: OpponentModel()]
+                let newAI = ReadingAI(profile: .hard), oldAI = ReadingAI(profile: .hardPrevious)
+                var guardCount = 0
+                while state.outcome == nil, guardCount < 400 {
+                    guardCount += 1
+                    if case .awaitingBombDirection = state.phase {
+                        let ai = ((state.current == .first) == newIsFirst) ? newAI : oldAI
+                        try state.chooseBombDirection(ai.chooseBombDirection(in: state, using: &rng))
+                        continue
+                    }
+                    let p = state.current
+                    let useNew = (p == .first) == newIsFirst
+                    let ai = useNew ? newAI : oldAI
+                    let t0 = Date()
+                    let r = ai.chooseMove(in: state, opponentModel: model[p]!, using: &rng)
+                    if useNew {
+                        let dt = Date().timeIntervalSince(t0)
+                        maxMove = max(maxMove, dt); totalMove += dt; moveCount += 1
+                    }
+                    model[p] = r.updatedModel
+                    guard let m = r.move else { break }
+                    try state.place(m.kind, at: m.position)
+                }
+                let newP: Player = newIsFirst ? .first : .second
+                let a = state.score(of: newP), b = state.score(of: newP.opponent)
+                if a > b { newWins += 1 } else if b > a { oldWins += 1 } else { draws += 1 }
+            }
+        }
+        print("新つよい \(newWins) 勝 / 前のつよい \(oldWins) 勝 / 引分 \(draws)（\(games * 2) 局） 1手 平均 \(totalMove / Double(max(1, moveCount))) 秒 / 最大 \(maxMove) 秒")
         #expect(newWins >= oldWins)
     }
 }

@@ -48,8 +48,8 @@ struct ResultCard<Actions: View>: View {
             .opacity(appeared || reduceMotion ? 1 : 0)
         }
         .onAppear { withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) { appeared = true } }
-        .sensoryFeedback(.success, trigger: appeared) { _, new in new && winner != nil }
         .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
     }
 
     /// 勝者の駒に王冠。引き分けは両者の駒を並べる

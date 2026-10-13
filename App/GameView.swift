@@ -7,6 +7,9 @@ struct GameView: View {
     let exit: () -> Void
     @Environment(Monetization.self) private var monetization
 
+    /// 対局終了後に結果ダイアログを閉じて最終盤面を見ている状態（感想戦）
+    @State private var isReviewing = false
+
     #if MEDIATION_QA
     @State private var showBannerQA = false
     #endif
@@ -29,6 +32,8 @@ struct GameView: View {
                 }
                 if case .awaitingBombDirection(let owner, _) = model.state.phase {
                     BombDirectionPicker(model: model, owner: owner)
+                } else if isReviewing {
+                    ReviewBar(showResult: { isReviewing = false }, backToTitle: exitAfterResult)
                 } else {
                     HandPicker(model: model, compact: compact)
                 }
@@ -43,7 +48,7 @@ struct GameView: View {
             .overlay { overlay }
             .safeAreaInset(edge: .top) {
                 HStack {
-                    Button("タイトルへ", systemImage: "chevron.left", action: exit)
+                    Button("タイトルへ", systemImage: "chevron.left", action: model.state.phase == .finished ? exitAfterResult : exit)
                         .labelStyle(.titleAndIcon)
                         .chromeButtonStyle()
                     Spacer()
@@ -67,6 +72,10 @@ struct GameView: View {
         #endif
         // 置いた瞬間の手応え（人間・CPU どちらの手でも）
         .sensoryFeedback(.impact(weight: .medium), trigger: model.lastPlaced)
+        // 勝敗が決まった瞬間に 1 回だけ（結果カードへ戻るたびには鳴らさない）
+        .sensoryFeedback(.success, trigger: model.state.phase == .finished) { _, finished in
+            finished && model.state.outcome != .draw
+        }
     }
 
     /// 手番の駒と文言。駒の色で誰の番かを一目で示す（高さは文言のみのときと同じ）
@@ -94,18 +103,22 @@ struct GameView: View {
         case .awaitingBombDirection(let owner, _):
             return model.isCPUThinking ? "CPU が爆発方向を選択中…" : "\(owner.displayName)の爆弾が裏返された！爆発方向を選択"
         case .finished:
-            return "ゲーム終了"
+            return "\(resultText)　先行 \(model.state.score(of: .first)) − \(model.state.score(of: .second)) 後攻"
         }
     }
 
     @ViewBuilder private var overlay: some View {
         switch model.state.phase {
-        case .finished:
+        case .finished where !isReviewing:
             ResultCard(
                 outcome: model.state.outcome,
                 firstScore: model.state.score(of: .first),
                 secondScore: model.state.score(of: .second)
             ) {
+                Button(action: { isReviewing = true }) {
+                    Text("盤面を見る").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.glass)
                 Button(action: exitAfterResult) {
                     Text("タイトルへ").frame(maxWidth: .infinity)
                 }
@@ -113,6 +126,14 @@ struct GameView: View {
             }
         default:
             EmptyView()
+        }
+    }
+
+    private var resultText: String {
+        switch model.state.outcome {
+        case .win(let p): "\(p.displayName)の勝ち！"
+        case .draw: "引き分け"
+        case nil: ""
         }
     }
 
@@ -125,5 +146,32 @@ struct GameView: View {
             from: UIViewController.topMost()
         )
         exit()
+    }
+}
+
+/// 感想戦中に手駒ピッカーの位置へ出す操作バー（結果文は上部の statusText が持つ）
+private struct ReviewBar: View {
+    let showResult: () -> Void
+    let backToTitle: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("感想戦中（盤面を確認できます）")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            GlassEffectContainer {
+                HStack(spacing: 12) {
+                    Button(action: showResult) {
+                        Text("結果を表示").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.glass)
+                    Button(action: backToTitle) {
+                        Text("タイトルへ").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.glassProminent)
+                }
+            }
+            .controlSize(.large)
+        }
     }
 }
