@@ -14,6 +14,7 @@
 
 /// コーチモードで説明する項目（spec の節との対応は TutorialScenarios.swift の各シナリオを参照）
 public enum TutorialTopic: String, CaseIterable, Sendable {
+    case screen
     case zones
     case flip
     case tie

@@ -14,7 +14,7 @@
 /// 説明の順に並べたシナリオ一覧
 public enum Tutorial {
     public static let scenarios: [TutorialScenario] = [
-        zones, flip, tie, behindArmy, enemyArmy, tank, bombCapture, bombExplosion, wasteland, grayCell, passAndEnd,
+        screen, zones, flip, tie, behindArmy, enemyArmy, tank, bombCapture, bombExplosion, wasteland, grayCell, passAndEnd,
     ]
 
     // MARK: - 記述用の短縮
@@ -42,6 +42,38 @@ public enum Tutorial {
     ) -> TutorialDemo {
         TutorialDemo(buttonTitle: buttonTitle, actions: actions, result: result, resultFocus: focus, after: after)
     }
+
+    // MARK: - 0. 画面の見かたと置きかた（アプリの UI の説明。spec §3.3 手駒）
+
+    /// 画面の操作（バー・手駒の一覧・結果カード）の説明。盤面そのものは変化しないので実演は無い。
+    /// 画面の文言・見た目はアプリ側（PlayerBar / HandPicker / ResultCard など）が正で、ここは claim で確かめられる手駒の枚数だけを検証する
+    static let screen = TutorialScenario(
+        id: .screen,
+        title: "画面の見かたと置きかた",
+        initial: GameState(),
+        steps: [
+            step(
+                "プレイヤーバー",
+                "盤の上が後攻、下が先行のバーです。駒の色の丸で誰のバーかが分かります。右端の「マス」は盤上にある自分の駒の数で、最後にこの数が多いほうが勝ちです。自分の番のバーには「手番」のバッジが付き、色の枠が光ります。",
+                before: [.current(.first)]),
+            step(
+                "手駒の確かめかた",
+                "バーの「手駒」は、まだ置いていない駒の枚数です。バーをタップすると、数字・T・B ごとの残り枚数が見られます。相手の残りの手駒もここで確かめられます。最初の手駒は、T が先行・後攻とも 1 枚、B が先行 1 枚・後攻 2 枚です。",
+                before: [
+                    .handCount(.first, .tank, 1), .handCount(.second, .tank, 1),
+                    .handCount(.first, .bomb, 1), .handCount(.second, .bomb, 2),
+                ]),
+            step(
+                "駒の置きかた",
+                "自分の番になったら、盤の下の手駒から置きたい駒をタップします。選んだ駒は持ち上がって光り、盤にはその駒を置けるマスにゆっくり脈打つ丸が出ます。あとは丸の出たマスをタップすれば置けます。相手の番のときや、置き場所のない駒は薄くなって選べません。",
+                before: [.phase(.setup(step: 0)), .current(.first)]),
+            step(
+                "裏返りの見えかた",
+                "駒が裏返るときは、くるっと回って向きが変わります。直前に置いた駒には白いリングが、裏返った駒には赤いリングが付くので、前の手で何が起きたかをすぐに確かめられます。B が裏返されると、持ち主に「上下左右」か「斜め」の選択が出て、爆発の方向を決めます（くわしくは「B の爆発」で）。"),
+            step(
+                "対局の終わり",
+                "勝敗が決まると結果カードが出て、勝ったほうのバーに「勝ち」のバッジが付きます。「盤面を見る」を押すと、最終盤面をゆっくり見返せます（感想戦）。「結果を表示」で結果カードに戻り、「タイトルへ」でタイトル画面に戻ります。"),
+        ])
 
     // MARK: - 1. ゾーンと点線（spec §2, §4.1）
 
