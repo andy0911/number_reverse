@@ -7,6 +7,7 @@
 - 仕様: [docs/spec.md](docs/spec.md)（曖昧点レジスタ・整合性検証を含む）
 - 実装計画: [docs/plan.md](docs/plan.md)
 - TestFlight 配布: [docs/testflight.md](docs/testflight.md)（`scripts/testflight.sh`）
+- 難易度の校正: [docs/calibration.md](docs/calibration.md)（`Core` の `calibrate` で対戦シミュレーション）
 
 ## 構成
 - `Core/` — ルールエンジンと CPU（Swift Package、UI 非依存）
