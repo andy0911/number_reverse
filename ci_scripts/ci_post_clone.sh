@@ -11,3 +11,10 @@ if ! command -v xcodegen >/dev/null 2>&1; then
 fi
 
 xcodegen generate
+
+# Xcode Cloud は SwiftPM の自動解決を無効にするため、解決済みの Package.resolved が必須。
+# xcodeproj は Git 管理外なので、管理下の ci_scripts/Package.resolved を生成後の場所へ置く。
+# 依存を更新したらこのファイルも更新する（xcodegen generate 後に Xcode で解決した結果をコピー）。
+resolved_dir=NumberOthello.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+mkdir -p "$resolved_dir"
+cp ci_scripts/Package.resolved "$resolved_dir/Package.resolved"

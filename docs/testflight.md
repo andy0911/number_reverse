@@ -55,6 +55,8 @@ Bundle ID は App Store Connect にアプリを作成すると変更できない
 4. ワークフローを作る。推奨: 開始条件は main へのプッシュ、環境は最新の Xcode と iOS 26.5 以上、アクションは Archive（iOS）。テストは AppTests/AppUITests を含めると時間を使うので、まず Archive のみ。ポストアクションに TestFlight 内部テスト配布を足す（外部テスト・審査提出は足さない）。
 5. 最初のビルドが `ci_post_clone.sh` を通って成功することを確認する。
 
+依存パッケージ（`project.yml` の packages）を更新したら、`ci_scripts/Package.resolved` も更新する（Xcode Cloud は自動解決が無効のため、無いとビルドが失敗する）。
+
 注意: 無料枠は月 25 時間（Apple Developer Program 付属）。超える分は課金になるので、開始条件は main のみにして PR ごとのビルドは設定しない。
 
 ## アプリ名について
