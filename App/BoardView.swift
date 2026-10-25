@@ -7,11 +7,13 @@ struct BoardView: View {
 
     var body: some View {
         let highlighted = model.highlightedCells
+        let weakHints = model.weakHintCells
         BoardFrame { p in
             CellView(
                 cell: model.state.board[p],
                 zone: Board.zone(of: p),
                 isHighlighted: highlighted.contains(p),
+                isWeakHint: weakHints.contains(p),
                 isFlipped: model.lastFlipped.contains(p),
                 isLastPlaced: model.lastPlaced == p
             )

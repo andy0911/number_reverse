@@ -84,10 +84,19 @@ struct GameView: View {
             if let player = model.actingPlayer {
                 ChipDot(owner: player).frame(width: 20, height: 20)
             }
-            Text(statusText)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .contentTransition(.opacity)
+            VStack(spacing: 2) {
+                Text(statusText)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .contentTransition(.opacity)
+                // 初期配置が終わった直後だけ、本戦の核（spec §5.1: 挟んだ自軍の合計が挟まれた相手軍の合計より大きいと返せる）を 1 行で伝える
+                if model.showsMainPhaseNotice, case .playing = model.state.phase {
+                    Text("ここから本戦。挟んだ自分の駒の合計が、相手の駒の合計より大きいと返せます")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: statusText)
     }
@@ -97,7 +106,7 @@ struct GameView: View {
         case .setup(let step):
             let player = model.state.current
             let zone = step < 2 ? "赤" : "青"
-            return "初期配置 2-\(step + 1)：\(player.displayName)が\(zone)マスの自陣側に数字駒を置く"
+            return "初期配置 6手中\(step + 1)手目：\(player.displayName)が自分の側の\(zone)いマスに数字駒を置く"
         case .playing:
             return model.isCPUThinking ? "CPU 思考中…" : "\(model.state.current.displayName)の番"
         case .awaitingBombDirection(let owner, _):

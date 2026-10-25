@@ -58,6 +58,8 @@ final class GameViewModel {
     private(set) var lastFlipped: Set<Position> = []
     private(set) var lastPlaced: Position?
     private(set) var isCPUThinking = false
+    /// 初期配置が終わった直後の案内を出している間 true。人間が本戦で最初の 1 手を置くまで続く
+    private(set) var showsMainPhaseNotice = false
 
     /// CPU のプロフィール（難易度）
     private let cpuProfile: CPUProfile
@@ -102,6 +104,12 @@ final class GameViewModel {
         return Set(state.legalMoves().filter { $0.kind == kind }.map(\.position))
     }
 
+    /// 初期配置で駒を選ぶ前に、置ける場所を弱く示すマス（選んだ後は `highlightedCells` が強く示す）
+    var weakHintCells: Set<Position> {
+        guard isHumanTurn, selectedKind == nil, case .setup(let step) = state.phase else { return [] }
+        return Set(GameState.setupCells(step: step).filter { state.board[$0] == .empty })
+    }
+
     var selectableKinds: [PieceKind] {
         let kinds = Set(state.legalMoves().map(\.kind))
         return PieceKind.allKinds.filter { kinds.contains($0) }
@@ -125,8 +133,12 @@ final class GameViewModel {
     }
 
     private func perform(_ move: Move) {
+        let mover = state.current
+        let wasSetup: Bool
+        if case .setup = state.phase { wasSetup = true } else { wasSetup = false }
         do {
             try state.place(move.kind, at: move.position)
+            updateMainPhaseNotice(wasSetup: wasSetup, mover: mover)
             message = nil
             record()
             selectedKind = nil
@@ -134,6 +146,15 @@ final class GameViewModel {
             message = Self.describe(error)
         }
         scheduleCPUIfNeeded()
+    }
+
+    /// 初期配置が終わったら案内を立て、人間が本戦で最初の 1 手を置いたら下ろす（CPU 同士のデモでは下ろさない）
+    private func updateMainPhaseNotice(wasSetup: Bool, mover: Player) {
+        if wasSetup {
+            if case .playing = state.phase { showsMainPhaseNotice = true }
+        } else if !mode.isCPU(mover) {
+            showsMainPhaseNotice = false
+        }
     }
 
     private func applyBomb(_ direction: BombDirection) {

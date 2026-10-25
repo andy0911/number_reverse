@@ -6,6 +6,8 @@ struct CellView: View {
     let cell: Cell
     let zone: Zone
     let isHighlighted: Bool
+    /// 駒を選ぶ前の弱い目印（初期配置で置ける場所）。`isHighlighted` のほうが優先される
+    var isWeakHint = false
     let isFlipped: Bool
     let isLastPlaced: Bool
 
@@ -14,6 +16,8 @@ struct CellView: View {
             Rectangle().fill(background)
             if isHighlighted {
                 HintMarker()
+            } else if isWeakHint {
+                WeakHintMarker()
             }
             switch cell {
             case .empty:
@@ -56,5 +60,15 @@ private struct HintMarker: View {
                 guard !reduceMotion else { return }
                 withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { pulse = true }
             }
+    }
+}
+
+/// 駒を選ぶ前の弱い目印。動かない破線のリングで、選んだ後の脈打つ実線のリングとは形でも区別できる
+private struct WeakHintMarker: View {
+    var body: some View {
+        Circle()
+            .strokeBorder(Theme.boardDivider.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+            .padding(14)
+            .accessibilityHidden(true)
     }
 }
