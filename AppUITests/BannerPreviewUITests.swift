@@ -51,7 +51,7 @@ final class BannerPreviewUITests: XCTestCase {
         XCTAssertTrue(piece.isHittable)
         piece.tap()
         board.coordinate(withNormalizedOffset: CGVector(dx: 0.4375, dy: 0.5625)).tap()
-        let nextTurn = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "初期配置 2-2")).firstMatch
+        let nextTurn = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "初期配置 6手中2手目")).firstMatch
         XCTAssertTrue(nextTurn.waitForExistence(timeout: 5))
         if app.frame.height < 750 {
             let handScroll = app.scrollViews.firstMatch
