@@ -11,3 +11,8 @@ if ! command -v xcodegen >/dev/null 2>&1; then
 fi
 
 xcodegen generate
+
+# Xcode Cloud は自動の依存解決を止めており、Package.resolved が無いと失敗する。
+# xcodeproj は生成物で Package.resolved も Git 管理外なので、ここで解決して所定の場所に作る
+# （バージョンは project.yml の exactVersion / revision で固定済み）
+xcodebuild -resolvePackageDependencies -project NumberOthello.xcodeproj -scheme NumberOthello
