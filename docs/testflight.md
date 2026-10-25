@@ -44,6 +44,19 @@ Bundle ID は App Store Connect にアプリを作成すると変更できない
    - テスト情報（ベータ版の説明、テストしてほしい点、フィードバック用メールアドレス）を入力する。
    - ビルドは最長 90 日間テストできる。
 
+## Xcode Cloud（自動ビルド・TestFlight 配布）
+
+リポジトリ側の準備: `ci_scripts/ci_post_clone.sh`（クローン直後に xcodegen を入れて `NumberOthello.xcodeproj` を生成する。xcodeproj は Git 管理外のため）。ビルド番号は Xcode Cloud が自動で振る（`CI_BUILD_NUMBER`）ので、`scripts/testflight.sh` の手動番号は使わない。署名は Xcode Cloud のクラウド管理（プロジェクトは `CODE_SIGN_STYLE: Automatic`）。
+
+本人が行う作業（Apple・GitHub の認可が要るため、リポジトリからは実行できない）:
+1. Mac で `xcodegen generate` を実行して xcodeproj を作り、Xcode で開く。
+2. Report navigator（⌘9）の Cloud タブ →「Get Started」→ プロダクトに「トオカエシ」（`jp.andygrave.tokaeshi`）を選ぶ。
+3. 「Grant Access」で GitHub の `andy0911/number_reverse` へのアクセスを Apple に許可する（GitHub 側で Xcode Cloud アプリのインストールが求められる）。
+4. ワークフローを作る。推奨: 開始条件は main へのプッシュ、環境は最新の Xcode と iOS 26.5 以上、アクションは Archive（iOS）。テストは AppTests/AppUITests を含めると時間を使うので、まず Archive のみ。ポストアクションに TestFlight 内部テスト配布を足す（外部テスト・審査提出は足さない）。
+5. 最初のビルドが `ci_post_clone.sh` を通って成功することを確認する。
+
+注意: 無料枠は月 25 時間（Apple Developer Program 付属）。超える分は課金になるので、開始条件は main のみにして PR ごとのビルドは設定しない。
+
 ## アプリ名について
 
 - 原案の「数字オセロ」の「オセロ」は株式会社メガハウスの登録商標（登録第2287072号）のため使わない。説明文やキーワードにも入れない。一般名称の「リバーシ」は説明語として使ってよい。
