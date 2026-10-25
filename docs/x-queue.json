@@ -1,0 +1,11 @@
+{
+  "approved": false,
+  "note": "approved を true にするのは、あんでぃさんが初投稿日と文面を承認した後。scheduled_at は日時確定後に実日付へ更新する（下はダミー）。",
+  "posts": [
+    {
+      "id": "x_credit",
+      "scheduled_at": "2099-01-01T03:00:00+00:00",
+      "text": "トオカエシは、@bdgame_ さんの数字リバーシの原案をもとに作ったiOSアプリです（原案: @bdgame_）。\n数字の合計で相手の軍を挟んで、裏返します。\nhttps://apps.apple.com/jp/app/id6817160128?ct=x_credit"
+    }
+  ]
+}
