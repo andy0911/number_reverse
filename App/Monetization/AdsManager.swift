@@ -143,9 +143,7 @@ final class AdsManager: NSObject {
     private func applyUnityPrivacy() {
         let allowed = effectiveUnityPersonalization
         appliedUnityPersonalization = allowed
-        let metadata = UADSMetaData()
-        metadata.set("privacy.consent", value: allowed)
-        metadata.commit()
+        UnityAds.setUserConsent(allowed)
     }
 
     private func resetUnityPersonalization() {
