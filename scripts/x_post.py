@@ -63,6 +63,8 @@ def main():
         sys.exit("検査NGがあるため投稿しない")
     if not do_send:
         return
+    if queue.get("method") == "chrome":
+        sys.exit("投稿方法は Chrome（手動操作）のため API では投稿しない（docs/x-posting.md）")
     if not queue.get("approved"):
         sys.exit("approved が true でないため投稿しない（あんでぃさんの承認後に true にする）")
     for post in queue["posts"]:

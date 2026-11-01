@@ -1,11 +1,30 @@
 {
   "approved": true,
-  "note": "2026-10-31 あんでぃさんが文面と自動投稿を承認（1.1.7公開後）。X APIキーが環境変数に入り次第、次回の x_post.py --send で投稿される。投稿後に Apple Ads の開始日（初投稿の8日目）を決める。",
+  "note": "投稿方法は Chrome（あんでぃさんのXアカウントを iMac の Chrome から手動操作。2026-11-01 決定）。X API は使わない（scripts/x_post.py の --send は method=chrome のとき動かない）。x_credit は 11/1 に投稿済み。残り3本は scheduled_at の日に、毎回あんでぃさんの承認の上で Chrome から投稿する。投稿したら tweet_id と posted_at を記録する。",
   "posts": [
     {
       "id": "x_credit",
       "scheduled_at": "2026-10-31T04:00:00+00:00",
-      "text": "トオカエシは、@bdgame_ さんの数字リバーシの原案をもとに作ったiOSアプリです（原案: @bdgame_）。\n数字の合計で相手の軍を挟んで、裏返します。\nhttps://apps.apple.com/jp/app/id6817160128?ct=x_credit"
+      "text": "トオカエシは、@bdgame_ さんの数字リバーシの原案をもとに作ったiOSアプリです（原案: @bdgame_）。\n数字の合計で相手の軍を挟んで、裏返します。\nhttps://apps.apple.com/jp/app/id6817160128?ct=x_credit",
+      "tweet_id": "2116877357969776767",
+      "posted_at": "2026-11-01T12:58:00+00:00",
+      "url": "https://x.com/ArbaLose/status/2116877357969776767"
+    },
+    {
+      "id": "x_flip",
+      "scheduled_at": "2026-11-04T03:00:00+00:00",
+      "text": "数字の合計で相手の駒を挟んで、裏返すリバーシ。\n自分の軍の合計が相手より大きいと、挟んだ駒が返ります。\niPhoneで遊べます → https://apps.apple.com/jp/app/id6817160128?ct=x_flip\n原案: @bdgame_"
+    },
+    {
+      "id": "x_rule",
+      "scheduled_at": "2026-11-08T03:00:00+00:00",
+      "text": "トオカエシのルールは、挟んだときの「合計」の勝負です。\n自軍の合計が相手軍より大きければ、挟んだ駒を返せます。\n表と裏の数字の和は10。裏返ると数字が変わるのがポイント（数字駒のみ）。\nhttps://apps.apple.com/jp/app/id6817160128?ct=x_rule\n原案: @bdgame_"
+    },
+    {
+      "id": "x_coach",
+      "scheduled_at": "2026-11-11T03:00:00+00:00",
+      "text": "ルールが難しそうなら、「遊び方を見る」から。\n盤面を指し示しながら、合計で挟んで返す流れを説明します。\nCPU戦も2人対戦もあります。 https://apps.apple.com/jp/app/id6817160128?ct=x_coach\n原案: @bdgame_"
     }
-  ]
+  ],
+  "method": "chrome"
 }
